@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FUSIONPOS Mini-CRM</title>
+<style>
+  /* ========== CONFIG ========== */
+  /* Замените эти две строки своими значениями после развёртывания Apps Script.
+     См. README.md, шаги 5 и 3. */
+
+  :root {
+    --bg: #ffffff;
+    --bg-secondary: #f7f7f5;
+    --bg-tertiary: #efeee9;
+    --text: #1a1a1a;
+    --text-secondary: #6b6b66;
+    --text-tertiary: #9a9a93;
+    --border: rgba(0,0,0,0.12);
+    --border-strong: rgba(0,0,0,0.22);
+    --accent: #1a1a1a;
+    --hot-bg: #FCEBEB; --hot-text: #791F1F;
+    --warm-bg: #FAEEDA; --warm-text: #633806;
+    --cold-bg: #E6F1FB; --cold-text: #0C447C;
+    --gold: #BA7517;
+    --success: #1D9E75;
+    --danger: #A32D2D;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--bg-tertiary);
+    margin: 0;
+    padding: 0;
+    line-height: 1.5;
+  }
+
+  .app {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 1rem;
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding: 0 4px;
+  }
+  .brand { font-size: 18px; font-weight: 500; }
+  .seller-name {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--text-secondary);
+  }
+  .seller-name input {
+    width: 140px; padding: 6px 10px;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 13px; background: var(--bg);
+  }
+
+  .sync-status {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--text-secondary);
+    padding: 4px 10px; border-radius: var(--radius);
+    background: var(--bg);
+  }
+  .sync-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--success);
+  }
+  .sync-status.syncing .sync-dot { background: var(--gold); animation: pulse 1s infinite; }
+  .sync-status.error .sync-dot { background: var(--danger); }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  .tabs {
+    display: flex; gap: 4px;
+    border-bottom: 0.5px solid var(--border);
+    margin-bottom: 1rem;
+    background: var(--bg);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    padding: 0 8px;
+  }
+  .tab {
+    padding: 12px 18px; cursor: pointer; font-size: 14px;
+    color: var(--text-secondary); border-bottom: 2px solid transparent;
+    user-select: none;
+  }
+  .tab.active { color: var(--text); border-bottom-color: var(--text); font-weight: 500; }
+
+  .panel { display: none; padding: 0 4px 2rem; }
+  .panel.active { display: block; }
+
+  .grid-stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px; margin-bottom: 1.5rem;
+  }
+  .stat {
+    background: var(--bg); border-radius: var(--radius); padding: 1rem;
+    border: 0.5px solid var(--border);
+  }
+  .stat-label { font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
+  .stat-value { font-size: 24px; font-weight: 500; }
+
+  .card {
+    background: var(--bg); border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg); padding: 1.25rem 1.5rem; margin-bottom: 12px;
+  }
+
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
+  .field-hint { font-size: 12px; color: var(--text-tertiary); margin-top: 4px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 600px) { .row { grid-template-columns: 1fr; } }
+
+  input[type="text"], input[type="number"], input[type="date"], input[type="datetime-local"], select, textarea {
+    width: 100%; padding: 8px 10px;
+    border: 0.5px solid var(--border); border-radius: var(--radius);
+    font-size: 14px; font-family: inherit;
+    background: var(--bg); color: var(--text);
+  }
+  textarea { resize: vertical; min-height: 80px; }
+  input:focus, select:focus, textarea:focus {
+    outline: none; border-color: var(--border-strong);
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.05);
+  }
+
+  .deal-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px; border: 0.5px solid var(--border);
+    border-radius: var(--radius); margin-bottom: 8px; background: var(--bg);
+    cursor: pointer; transition: border-color 0.1s;
+  }
+  .deal-row:hover { border-color: var(--border-strong); }
+  .deal-main { flex: 1; min-width: 0; }
+  .deal-name { font-weight: 500; font-size: 14px; }
+  .deal-meta { font-size: 12px; color: var(--text-secondary); margin-top: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .temp {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px; border-radius: var(--radius);
+    font-size: 12px; font-weight: 500; white-space: nowrap;
+  }
+  .temp-hot { background: var(--hot-bg); color: var(--hot-text); }
+  .temp-warm { background: var(--warm-bg); color: var(--warm-text); }
+  .temp-cold { background: var(--cold-bg); color: var(--cold-text); }
+
+  .next-date { font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
+  .next-date.overdue { color: var(--danger); font-weight: 500; }
+
+  .actions { display: flex; gap: 8px; margin-top: 1rem; flex-wrap: wrap; }
+  button {
+    padding: 9px 18px; border: 0.5px solid var(--border);
+    border-radius: var(--radius); background: var(--bg);
+    font-size: 14px; cursor: pointer; font-family: inherit;
+    color: var(--text); transition: all 0.1s;
+  }
+  button:hover { border-color: var(--border-strong); background: var(--bg-secondary); }
+  button:active { transform: scale(0.98); }
+  button.primary { background: var(--text); color: var(--bg); border-color: var(--text); font-weight: 500; }
+  button.primary:hover { background: #000; }
+  button.danger { color: var(--danger); }
+
+  .quote {
+    padding: 14px 18px; background: var(--bg);
+    border-left: 3px solid var(--gold); border-radius: 0 var(--radius) var(--radius) 0;
+    margin-bottom: 12px; border-top: 0.5px solid var(--border);
+    border-right: 0.5px solid var(--border); border-bottom: 0.5px solid var(--border);
+  }
+  .quote-text { font-style: italic; font-size: 15px; line-height: 1.5; }
+  .quote-meta { font-size: 12px; color: var(--text-secondary); margin-top: 8px; }
+
+  .filter-row { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
+  .filter-chip {
+    padding: 6px 14px; border: 0.5px solid var(--border);
+    border-radius: var(--radius); font-size: 13px; cursor: pointer;
+    background: var(--bg);
+  }
+  .filter-chip.active { background: var(--text); color: var(--bg); border-color: var(--text); font-weight: 500; }
+
+  .empty { text-align: center; padding: 2rem; color: var(--text-secondary); font-size: 14px; }
+  .loading { text-align: center; padding: 2rem; color: var(--text-secondary); font-size: 14px; }
+
+  .section-title { font-size: 16px; font-weight: 500; margin: 1.5rem 0 0.75rem; }
+
+  .checklist {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px;
+    font-size: 13px; margin-top: 12px;
+  }
+  .check-item { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); }
+  .check-item.done { color: var(--text); }
+  .check-item .icon {
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 1.5px solid var(--text-tertiary); display: inline-block; flex-shrink: 0;
+  }
+  .check-item.done .icon {
+    background: var(--success); border-color: var(--success);
+    position: relative;
+  }
+  .check-item.done .icon::after {
+    content: ''; position: absolute;
+    left: 4px; top: 1px; width: 4px; height: 8px;
+    border: solid white; border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+
+  .need-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border: 0.5px solid var(--border);
+    border-radius: var(--radius); font-size: 13px; cursor: pointer;
+    background: var(--bg); margin: 0 4px 4px 0;
+    user-select: none;
+  }
+  .need-chip input { margin: 0; cursor: pointer; }
+  .need-chip:hover { background: var(--bg-secondary); }
+
+  .modal-bg {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+    z-index: 100; align-items: flex-start; justify-content: center;
+    padding: 3rem 1rem; overflow-y: auto;
+  }
+  .modal-bg.show { display: flex; }
+  .modal {
+    background: var(--bg); border-radius: var(--radius-lg); padding: 1.5rem;
+    max-width: 580px; width: 100%;
+  }
+  .modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 1rem;
+  }
+  .modal-title { font-size: 18px; font-weight: 500; }
+  .close-btn {
+    background: transparent; border: none; cursor: pointer;
+    padding: 4px 8px; font-size: 20px; line-height: 1; color: var(--text-secondary);
+  }
+
+  .detail-grid {
+    display: grid; grid-template-columns: 140px 1fr;
+    gap: 8px 16px; font-size: 14px;
+  }
+  .detail-grid > div:nth-child(odd) { color: var(--text-secondary); }
+
+  .gold-marker { color: var(--gold); font-weight: 500; }
+
+  .config-warning {
+    background: #FAEEDA; color: #633806; padding: 12px 16px;
+    border-radius: var(--radius); margin-bottom: 1rem; font-size: 13px;
+    border: 0.5px solid #EF9F27;
+  }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--text); color: var(--bg); padding: 10px 18px;
+    border-radius: var(--radius); font-size: 14px; z-index: 200;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .toast.show { opacity: 1; }
+  .toast.error { background: var(--danger); }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="topbar">
+    <div class="brand">FUSIONPOS · CRM</div>
+    <div style="display:flex; gap:12px; align-items:center;">
+      <div class="seller-name">
+        <span>Продавец:</span>
+        <input type="text" id="seller-name" placeholder="Имя">
+      </div>
+      <div class="sync-status" id="sync-status">
+        <span class="sync-dot"></span>
+        <span id="sync-text">Загрузка...</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="config-warning-host"></div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="dashboard">Дашборд</div>
+    <div class="tab" data-tab="deals">Сделки</div>
+    <div class="tab" data-tab="form">Итог звонка</div>
+    <div class="tab" data-tab="quotes">Цитаты боли</div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="panel active" id="panel-dashboard">
+    <div class="grid-stats">
+      <div class="stat"><div class="stat-label">Всего сделок</div><div class="stat-value" id="stat-total">—</div></div>
+      <div class="stat"><div class="stat-label">Горячие</div><div class="stat-value" id="stat-hot" style="color:var(--hot-text)">—</div></div>
+      <div class="stat"><div class="stat-label">Тёплые</div><div class="stat-value" id="stat-warm" style="color:var(--warm-text)">—</div></div>
+      <div class="stat"><div class="stat-label">Просрочены follow-up</div><div class="stat-value" id="stat-overdue" style="color:var(--danger)">—</div></div>
+    </div>
+    <div class="section-title">Ближайшие follow-up</div>
+    <div id="upcoming-list"></div>
+  </div>
+
+  <!-- DEALS -->
+  <div class="panel" id="panel-deals">
+    <div class="filter-row">
+      <button class="filter-chip active" data-filter="all">Все</button>
+      <button class="filter-chip" data-filter="hot">Горячие</button>
+      <button class="filter-chip" data-filter="warm">Тёплые</button>
+      <button class="filter-chip" data-filter="cold">Холодные</button>
+      <button class="filter-chip" data-filter="overdue">Просроченные</button>
+      <button class="filter-chip" id="btn-refresh" style="margin-left:auto">↻ Обновить</button>
+    </div>
+    <div id="deals-list"></div>
+  </div>
+
+  <!-- FORM -->
+  <div class="panel" id="panel-form">
+    <div class="card">
+      <div style="font-size:16px;font-weight:500;margin-bottom:1rem">Итог звонка — чек-лист п.11</div>
+
+      <div class="row">
+        <div class="field">
+          <label>Клиент / название</label>
+          <input type="text" id="f-client_name" placeholder='Кафе «Ромашка», Иван Петров'>
+        </div>
+        <div class="field">
+          <label>Телефон</label>
+          <input type="text" id="f-phone" placeholder="+7...">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Тип заведения</label>
+          <select id="f-type">
+            <option value="">—</option>
+            <option>Кофейня / пекарня</option>
+            <option>Пиццерия с доставкой</option>
+            <option>Кафе / ресторан с официантами</option>
+            <option>Бар / кальянная</option>
+            <option>Столовая / фастфуд</option>
+            <option>Фудтрак</option>
+            <option>Магазин</option>
+            <option>Другое</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Количество точек</label>
+          <input type="number" id="f-points" min="1" placeholder="1">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Стадия</label>
+          <select id="f-stage">
+            <option value="">—</option>
+            <option>Открывается</option>
+            <option>Работает</option>
+            <option>Только думает открывать</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Дата открытия / перехода</label>
+          <input type="date" id="f-open_date">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Что используют сейчас</label>
+        <select id="f-current_system">
+          <option value="">—</option>
+          <option>С нуля</option>
+          <option>Эвотор / Атол / касса от банка</option>
+          <option>iiko</option>
+          <option>R-Keeper</option>
+          <option>МойСклад / Контур.Маркет</option>
+          <option>Не знают (бухгалтер)</option>
+          <option>Другое</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Причина смены — дословно <span class="gold-marker">★ золото</span></label>
+        <textarea id="f-pain_quote" rows="3" placeholder="Записываем как сказал клиент. Эти формулировки лучше любого маркетинга."></textarea>
+        <div class="field-hint">Эта цитата автоматически попадёт во вкладку «Цитаты боли» и в лист Pain_Quotes</div>
+      </div>
+
+      <div class="field">
+        <label>Ключевые потребности</label>
+        <div id="f-needs">
+          <label class="need-chip"><input type="checkbox" value="Касса/ФЗ-54"> Касса/ФЗ-54</label>
+          <label class="need-chip"><input type="checkbox" value="Склад"> Склад</label>
+          <label class="need-chip"><input type="checkbox" value="Доставка"> Доставка</label>
+          <label class="need-chip"><input type="checkbox" value="Аналитика"> Аналитика</label>
+          <label class="need-chip"><input type="checkbox" value="ЕГАИС"> ЕГАИС</label>
+          <label class="need-chip"><input type="checkbox" value="Честный знак"> ЧЗ</label>
+          <label class="need-chip"><input type="checkbox" value="Лояльность"> Лояльность</label>
+          <label class="need-chip"><input type="checkbox" value="Экраны кухни"> Экраны кухни</label>
+          <label class="need-chip"><input type="checkbox" value="План зала"> План зала</label>
+          <label class="need-chip"><input type="checkbox" value="1С"> 1С</label>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Температура</label>
+          <select id="f-temperature">
+            <option value="">—</option>
+            <option value="hot">Горячий</option>
+            <option value="warm">Тёплый</option>
+            <option value="cold">Холодный</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Кто ЛПР</label>
+          <select id="f-dm">
+            <option value="">—</option>
+            <option>Собеседник</option>
+            <option>Партнёр</option>
+            <option>Бухгалтер</option>
+            <option>IT</option>
+            <option>Другой</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Оборот точки, ₽/мес</label>
+          <input type="number" id="f-revenue" placeholder="500000">
+        </div>
+        <div class="field">
+          <label>Тариф предложен</label>
+          <select id="f-plan">
+            <option value="">—</option>
+            <option>Всё включено (0,5%)</option>
+            <option>Стандарт (2 190 ₽)</option>
+            <option>Не обсуждали</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Оборудование</label>
+        <select id="f-hardware">
+          <option value="">—</option>
+          <option>Не нужно (есть своё)</option>
+          <option>Комплект «Старт» (~70К)</option>
+          <option>Комплект «Профи» (~150К)</option>
+          <option>Под уточнение</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Статус сделки</label>
+        <select id="f-status">
+          <option value="">—</option>
+          <option>Первичный контакт</option>
+          <option>Демо назначено</option>
+          <option>Демо проведено</option>
+          <option>КП отправлено</option>
+          <option>Счёт выставлен</option>
+          <option>Оплачено</option>
+          <option>Отказ</option>
+          <option>Долгий nurture</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Следующий шаг — что</label>
+          <input type="text" id="f-next_step" placeholder="Демо в zoom / отправить счёт / контрольный звонок">
+        </div>
+        <div class="field">
+          <label>Следующий шаг — когда</label>
+          <input type="datetime-local" id="f-next_date">
+        </div>
+      </div>
+
+      <input type="hidden" id="f-id">
+
+      <div class="actions">
+        <button id="btn-save" class="primary">Сохранить в Sheets</button>
+        <button id="btn-clear">Очистить форму</button>
+      </div>
+
+      <div class="section-title" style="margin-top:1.5rem;font-size:14px;">Заполнено по чек-листу п.11</div>
+      <div class="checklist" id="checklist-status"></div>
+    </div>
+  </div>
+
+  <!-- QUOTES -->
+  <div class="panel" id="panel-quotes">
+    <div style="color:var(--text-secondary);margin-bottom:1rem;font-size:13px">
+      Дословные цитаты клиентов о боли — то самое золото из скрипта. Хранятся в листе Pain_Quotes.
+    </div>
+    <div id="quotes-list"></div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-bg" id="detail-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">—</div>
+      <button class="close-btn" id="modal-close">×</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ============================================================
+  // CONFIG — заполните эти две строки после развёртывания Apps Script
+  // ============================================================
+  const API_URL = 'https://script.google.com/macros/s/AKfycbzcjZ1c8lWkbKUBRO41GocHso8RAXGfBhZMCcPtmOMN1LB7J6F85-GIx9CIHFXjnwSvBg/exec';
+  const API_TOKEN = 'fpos_x7Kj9mNqR3vL2pWdF8sH';
+  // ============================================================
+
+  const FIELDS = [
+    'client_name', 'phone', 'type', 'points', 'stage', 'open_date',
+    'current_system', 'pain_quote', 'temperature', 'dm', 'revenue',
+    'plan', 'hardware', 'status', 'next_step', 'next_date'
+  ];
+
+  let deals = [];
+  let quotes = [];
+  let currentFilter = 'all';
+  let editingId = null;
+
+  // ============================================================
+  // API client
+  // ============================================================
+
+  async function api(action, body) {
+    if (API_URL.startsWith('PASTE_') || API_TOKEN.startsWith('PASTE_')) {
+      throw new Error('API не настроен — см. README.md');
+    }
+    const url = `${API_URL}?action=${action}&token=${encodeURIComponent(API_TOKEN)}`;
+    const opts = {
+      method: body ? 'POST' : 'GET',
+      // text/plain чтобы избежать CORS preflight в Apps Script
+      headers: body ? { 'Content-Type': 'text/plain;charset=utf-8' } : {},
+      body: body ? JSON.stringify(body) : undefined
+    };
+    const res = await fetch(url, opts);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    return data;
+  }
+
+  function setSync(state, text) {
+    const el = document.getElementById('sync-status');
+    el.className = 'sync-status' + (state === 'syncing' ? ' syncing' : state === 'error' ? ' error' : '');
+    document.getElementById('sync-text').textContent = text;
+  }
+
+  function showToast(msg, isError) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (isError ? ' error' : '');
+    setTimeout(() => t.className = 'toast' + (isError ? ' error' : ''), 2500);
+  }
+
+  // ============================================================
+  // Seller name persistence (in localStorage — это про человека, не про данные)
+  // ============================================================
+
+  const sellerInput = document.getElementById('seller-name');
+  sellerInput.value = localStorage.getItem('fpos_seller') || '';
+  sellerInput.addEventListener('change', () => {
+    localStorage.setItem('fpos_seller', sellerInput.value);
+  });
+
+  // ============================================================
+  // Config check
+  // ============================================================
+
+  if (API_URL.startsWith('PASTE_') || API_TOKEN.startsWith('PASTE_')) {
+    document.getElementById('config-warning-host').innerHTML = `
+      <div class="config-warning">
+        <strong>API не настроен.</strong> Откройте этот файл в редакторе и заполните <code>API_URL</code>
+        и <code>API_TOKEN</code> в начале &lt;script&gt;-блока (см. README.md, шаги 5 и 3).
+      </div>`;
+    setSync('error', 'API не настроен');
+  } else {
+    loadAll();
+  }
+
+  // ============================================================
+  // Loading data
+  // ============================================================
+
+  async function loadAll() {
+    setSync('syncing', 'Загружаем...');
+    try {
+      const [dealsResp, quotesResp] = await Promise.all([
+        api('list'),
+        api('quotes')
+      ]);
+      deals = dealsResp.deals || [];
+      quotes = quotesResp.quotes || [];
+      setSync('ok', `Загружено: ${deals.length}`);
+      render();
+    } catch (e) {
+      setSync('error', 'Ошибка: ' + e.message);
+      console.error(e);
+    }
+  }
+
+  // ============================================================
+  // Tab switching
+  // ============================================================
+
+  document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      document.getElementById('panel-' + t.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ============================================================
+  // Filters
+  // ============================================================
+
+  document.querySelectorAll('.filter-chip[data-filter]').forEach(c => {
+    c.addEventListener('click', () => {
+      document.querySelectorAll('.filter-chip[data-filter]').forEach(x => x.classList.remove('active'));
+      c.classList.add('active');
+      currentFilter = c.dataset.filter;
+      renderDeals();
+    });
+  });
+
+  document.getElementById('btn-refresh').addEventListener('click', loadAll);
+
+  // ============================================================
+  // Helpers
+  // ============================================================
+
+  function isOverdue(d) {
+    if (!d.next_date) return false;
+    return new Date(d.next_date) < new Date() && d.status !== 'Оплачено' && d.status !== 'Отказ';
+  }
+
+  function tempBadge(t) {
+    if (t === 'hot') return '<span class="temp temp-hot">🔥 Горячий</span>';
+    if (t === 'warm') return '<span class="temp temp-warm">Тёплый</span>';
+    if (t === 'cold') return '<span class="temp temp-cold">Холодный</span>';
+    return '';
+  }
+
+  function fmtDate(s) {
+    if (!s) return '—';
+    const d = new Date(s);
+    if (isNaN(d)) return '—';
+    return d.toLocaleString('ru-RU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  // ============================================================
+  // Render
+  // ============================================================
+
+  function render() {
+    renderDashboard();
+    renderDeals();
+    renderQuotes();
+    updateChecklistStatus();
+  }
+
+  function renderDashboard() {
+    document.getElementById('stat-total').textContent = deals.length;
+    document.getElementById('stat-hot').textContent = deals.filter(d => d.temperature === 'hot').length;
+    document.getElementById('stat-warm').textContent = deals.filter(d => d.temperature === 'warm').length;
+    document.getElementById('stat-overdue').textContent = deals.filter(isOverdue).length;
+
+    const upcoming = deals
+      .filter(d => d.next_date && d.status !== 'Оплачено' && d.status !== 'Отказ')
+      .sort((a, b) => new Date(a.next_date) - new Date(b.next_date))
+      .slice(0, 5);
+
+    const list = document.getElementById('upcoming-list');
+    if (upcoming.length === 0) {
+      list.innerHTML = '<div class="empty">Нет запланированных follow-up</div>';
+      return;
+    }
+    list.innerHTML = upcoming.map(d => `
+      <div class="deal-row" data-id="${escapeHtml(d.id)}">
+        <div class="deal-main">
+          <div class="deal-name">${escapeHtml(d.client_name || 'Без названия')}</div>
+          <div class="deal-meta">${escapeHtml(d.next_step || '—')}</div>
+        </div>
+        ${tempBadge(d.temperature)}
+        <div class="next-date ${isOverdue(d) ? 'overdue' : ''}">${fmtDate(d.next_date)}</div>
+      </div>
+    `).join('');
+    list.querySelectorAll('.deal-row').forEach(row => {
+      row.addEventListener('click', () => openDetail(row.dataset.id));
+    });
+  }
+
+  function renderDeals() {
+    let list = deals.slice();
+    if (currentFilter === 'hot') list = list.filter(d => d.temperature === 'hot');
+    else if (currentFilter === 'warm') list = list.filter(d => d.temperature === 'warm');
+    else if (currentFilter === 'cold') list = list.filter(d => d.temperature === 'cold');
+    else if (currentFilter === 'overdue') list = list.filter(isOverdue);
+
+    list.sort((a, b) => {
+      const ad = a.next_date ? new Date(a.next_date) : new Date(8.64e15);
+      const bd = b.next_date ? new Date(b.next_date) : new Date(8.64e15);
+      return ad - bd;
+    });
+
+    const el = document.getElementById('deals-list');
+    if (list.length === 0) {
+      el.innerHTML = '<div class="empty">Нет сделок под этот фильтр</div>';
+      return;
+    }
+    el.innerHTML = list.map(d => `
+      <div class="deal-row" data-id="${escapeHtml(d.id)}">
+        <div class="deal-main">
+          <div class="deal-name">${escapeHtml(d.client_name || 'Без названия')}</div>
+          <div class="deal-meta">${escapeHtml(d.type || '—')} · ${escapeHtml(d.status || '—')} · ${escapeHtml(d.next_step || 'нет шага')}</div>
+        </div>
+        ${tempBadge(d.temperature)}
+        <div class="next-date ${isOverdue(d) ? 'overdue' : ''}">${fmtDate(d.next_date)}</div>
+      </div>
+    `).join('');
+
+    el.querySelectorAll('.deal-row').forEach(row => {
+      row.addEventListener('click', () => openDetail(row.dataset.id));
+    });
+  }
+
+  function renderQuotes() {
+    const el = document.getElementById('quotes-list');
+    if (quotes.length === 0) {
+      el.innerHTML = '<div class="empty">Цитат пока нет. Заполняйте поле «причина смены — дословно» в форме итога звонка.</div>';
+      return;
+    }
+    const sorted = quotes.slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    el.innerHTML = sorted.map(q => `
+      <div class="quote">
+        <div class="quote-text">«${escapeHtml(q.quote)}»</div>
+        <div class="quote-meta">${escapeHtml(q.client_name || '')} · ${escapeHtml(q.venue_type || '')} · сейчас: ${escapeHtml(q.current_system || '—')}</div>
+      </div>
+    `).join('');
+  }
+
+  // ============================================================
+  // Form
+  // ============================================================
+
+  function readForm() {
+    const obj = { needs: [] };
+    FIELDS.forEach(f => {
+      const el = document.getElementById('f-' + f);
+      if (el) obj[f] = el.value;
+    });
+    document.querySelectorAll('#f-needs input:checked').forEach(c => obj.needs.push(c.value));
+    obj.seller = sellerInput.value;
+    obj.id = document.getElementById('f-id').value || undefined;
+    return obj;
+  }
+
+  function fillForm(deal) {
+    FIELDS.forEach(f => {
+      const el = document.getElementById('f-' + f);
+      if (el) {
+        let v = deal[f] || '';
+        // Datetime-local needs trimmed ISO without timezone for input
+        if (f === 'next_date' && v) {
+          v = String(v).slice(0, 16);
+        }
+        if (f === 'open_date' && v) {
+          v = String(v).slice(0, 10);
+        }
+        el.value = v;
+      }
+    });
+    document.querySelectorAll('#f-needs input').forEach(c => c.checked = false);
+    const needs = Array.isArray(deal.needs) ? deal.needs : [];
+    needs.forEach(n => {
+      const cb = document.querySelector(`#f-needs input[value="${n}"]`);
+      if (cb) cb.checked = true;
+    });
+    document.getElementById('f-id').value = deal.id || '';
+    updateChecklistStatus();
+  }
+
+  function clearForm() {
+    FIELDS.forEach(f => { const el = document.getElementById('f-' + f); if (el) el.value = ''; });
+    document.querySelectorAll('#f-needs input').forEach(c => c.checked = false);
+    document.getElementById('f-id').value = '';
+    editingId = null;
+    updateChecklistStatus();
+  }
+
+  function updateChecklistStatus() {
+    const f = readForm();
+    const items = [
+      { label: 'Тип заведения + точки', done: !!f.type && !!f.points },
+      { label: 'Стадия + дата', done: !!f.stage },
+      { label: 'Что используют сейчас', done: !!f.current_system },
+      { label: 'Причина смены (дословно)', done: !!f.pain_quote && f.pain_quote.trim().length > 10 },
+      { label: 'Потребности отмечены', done: f.needs.length > 0 },
+      { label: 'Температура', done: !!f.temperature },
+      { label: 'ЛПР', done: !!f.dm },
+      { label: 'Оборот точки', done: !!f.revenue },
+      { label: 'Тариф предложен', done: !!f.plan },
+      { label: 'Оборудование', done: !!f.hardware },
+      { label: 'Статус сделки', done: !!f.status },
+      { label: 'Следующий шаг + дата', done: !!f.next_step && !!f.next_date },
+    ];
+    document.getElementById('checklist-status').innerHTML = items.map(i => `
+      <div class="check-item ${i.done ? 'done' : ''}">
+        <span class="icon"></span>${escapeHtml(i.label)}
+      </div>
+    `).join('');
+  }
+
+  document.getElementById('panel-form').addEventListener('input', updateChecklistStatus);
+  document.getElementById('panel-form').addEventListener('change', updateChecklistStatus);
+
+  document.getElementById('btn-save').addEventListener('click', async () => {
+    const data = readForm();
+    if (!data.client_name) {
+      showToast('Укажите хотя бы название клиента', true);
+      return;
+    }
+    setSync('syncing', 'Сохраняем...');
+    try {
+      await api('save', data);
+      await loadAll();
+      clearForm();
+      // Переключаемся на список
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+      document.querySelector('[data-tab="deals"]').classList.add('active');
+      document.getElementById('panel-deals').classList.add('active');
+      showToast('Сохранено в Sheets ✓');
+    } catch (e) {
+      setSync('error', 'Ошибка: ' + e.message);
+      showToast('Ошибка сохранения: ' + e.message, true);
+    }
+  });
+
+  document.getElementById('btn-clear').addEventListener('click', clearForm);
+
+  // ============================================================
+  // Detail modal
+  // ============================================================
+
+  function openDetail(id) {
+    const d = deals.find(x => x.id === id);
+    if (!d) return;
+    document.getElementById('modal-title').textContent = d.client_name || 'Без названия';
+
+    const needs = Array.isArray(d.needs) ? d.needs : [];
+    document.getElementById('modal-body').innerHTML = `
+      <div class="detail-grid">
+        <div>Телефон</div><div>${escapeHtml(d.phone || '—')}</div>
+        <div>Тип / точек</div><div>${escapeHtml(d.type || '—')} · ${escapeHtml(String(d.points || '—'))}</div>
+        <div>Стадия</div><div>${escapeHtml(d.stage || '—')}${d.open_date ? ' · ' + escapeHtml(String(d.open_date).slice(0, 10)) : ''}</div>
+        <div>Сейчас на</div><div>${escapeHtml(d.current_system || '—')}</div>
+        <div>Потребности</div><div>${needs.map(escapeHtml).join(', ') || '—'}</div>
+        <div>Температура</div><div>${tempBadge(d.temperature)}</div>
+        <div>ЛПР</div><div>${escapeHtml(d.dm || '—')}</div>
+        <div>Оборот</div><div>${d.revenue ? Number(d.revenue).toLocaleString('ru-RU') + ' ₽/мес' : '—'}</div>
+        <div>Тариф</div><div>${escapeHtml(d.plan || '—')}</div>
+        <div>Оборудование</div><div>${escapeHtml(d.hardware || '—')}</div>
+        <div>Статус</div><div>${escapeHtml(d.status || '—')}</div>
+        <div>Следующий шаг</div><div>${escapeHtml(d.next_step || '—')}<br><span style="color:var(--text-secondary);font-size:12px">${fmtDate(d.next_date)}</span></div>
+        <div>Продавец</div><div>${escapeHtml(d.seller || '—')}</div>
+      </div>
+      ${d.pain_quote ? `
+        <div style="margin-top:1rem">
+          <div style="font-size:13px;color:var(--text-secondary);margin-bottom:6px">Цитата боли</div>
+          <div class="quote"><div class="quote-text">«${escapeHtml(d.pain_quote)}»</div></div>
+        </div>` : ''}
+      <div class="actions">
+        <button id="modal-edit" class="primary">Редактировать</button>
+        <button id="modal-delete" class="danger">Удалить</button>
+      </div>
+    `;
+
+    document.getElementById('modal-edit').addEventListener('click', () => {
+      fillForm(d);
+      editingId = d.id;
+      document.getElementById('detail-modal').classList.remove('show');
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+      document.querySelector('[data-tab="form"]').classList.add('active');
+      document.getElementById('panel-form').classList.add('active');
+    });
+
+    document.getElementById('modal-delete').addEventListener('click', async () => {
+      if (!confirm('Удалить сделку?')) return;
+      setSync('syncing', 'Удаляем...');
+      try {
+        await api('delete', { id: d.id });
+        document.getElementById('detail-modal').classList.remove('show');
+        await loadAll();
+        showToast('Удалено');
+      } catch (e) {
+        setSync('error', 'Ошибка');
+        showToast('Ошибка удаления: ' + e.message, true);
+      }
+    });
+
+    document.getElementById('detail-modal').classList.add('show');
+  }
+
+  document.getElementById('modal-close').addEventListener('click', () => {
+    document.getElementById('detail-modal').classList.remove('show');
+  });
+
+  document.getElementById('detail-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'detail-modal') {
+      document.getElementById('detail-modal').classList.remove('show');
+    }
+  });
+
+  // Initial checklist render
+  updateChecklistStatus();
+</script>
+
+</body>
+</html>
