@@ -5,10 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FUSIONPOS Mini-CRM</title>
 <style>
-  /* ========== CONFIG ========== */
-  /* Замените эти две строки своими значениями после развёртывания Apps Script.
-     См. README.md, шаги 5 и 3. */
-
   :root {
     --bg: #ffffff;
     --bg-secondary: #f7f7f5;
@@ -18,7 +14,6 @@
     --text-tertiary: #9a9a93;
     --border: rgba(0,0,0,0.12);
     --border-strong: rgba(0,0,0,0.22);
-    --accent: #1a1a1a;
     --hot-bg: #FCEBEB; --hot-text: #791F1F;
     --warm-bg: #FAEEDA; --warm-text: #633806;
     --cold-bg: #E6F1FB; --cold-text: #0C447C;
@@ -28,64 +23,38 @@
     --radius: 8px;
     --radius-lg: 12px;
   }
-
   * { box-sizing: border-box; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     font-size: 14px;
     color: var(--text);
     background: var(--bg-tertiary);
-    margin: 0;
-    padding: 0;
-    line-height: 1.5;
+    margin: 0; padding: 0; line-height: 1.5;
   }
-
-  .app {
-    max-width: 1080px;
-    margin: 0 auto;
-    padding: 1rem;
-  }
-
+  .app { max-width: 1080px; margin: 0 auto; padding: 1rem; }
   .topbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1rem;
-    padding: 0 4px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 1rem; padding: 0 4px; gap: 12px; flex-wrap: wrap;
   }
   .brand { font-size: 18px; font-weight: 500; }
-  .seller-name {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 13px; color: var(--text-secondary);
-  }
+  .seller-name { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); }
   .seller-name input {
-    width: 140px; padding: 6px 10px;
-    border: 0.5px solid var(--border);
-    border-radius: var(--radius);
-    font-size: 13px; background: var(--bg);
+    width: 140px; padding: 6px 10px; border: 0.5px solid var(--border);
+    border-radius: var(--radius); font-size: 13px; background: var(--bg);
   }
-
   .sync-status {
     display: inline-flex; align-items: center; gap: 6px;
     font-size: 12px; color: var(--text-secondary);
-    padding: 4px 10px; border-radius: var(--radius);
-    background: var(--bg);
+    padding: 4px 10px; border-radius: var(--radius); background: var(--bg);
   }
-  .sync-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--success);
-  }
+  .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
   .sync-status.syncing .sync-dot { background: var(--gold); animation: pulse 1s infinite; }
   .sync-status.error .sync-dot { background: var(--danger); }
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
-
   .tabs {
-    display: flex; gap: 4px;
-    border-bottom: 0.5px solid var(--border);
-    margin-bottom: 1rem;
-    background: var(--bg);
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    padding: 0 8px;
+    display: flex; gap: 4px; border-bottom: 0.5px solid var(--border);
+    margin-bottom: 1rem; background: var(--bg);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: 0 8px;
   }
   .tab {
     padding: 12px 18px; cursor: pointer; font-size: 14px;
@@ -93,44 +62,28 @@
     user-select: none;
   }
   .tab.active { color: var(--text); border-bottom-color: var(--text); font-weight: 500; }
-
   .panel { display: none; padding: 0 4px 2rem; }
   .panel.active { display: block; }
-
   .grid-stats {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: 12px; margin-bottom: 1.5rem;
   }
-  .stat {
-    background: var(--bg); border-radius: var(--radius); padding: 1rem;
-    border: 0.5px solid var(--border);
-  }
+  .stat { background: var(--bg); border-radius: var(--radius); padding: 1rem; border: 0.5px solid var(--border); }
   .stat-label { font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
   .stat-value { font-size: 24px; font-weight: 500; }
-
-  .card {
-    background: var(--bg); border: 0.5px solid var(--border);
-    border-radius: var(--radius-lg); padding: 1.25rem 1.5rem; margin-bottom: 12px;
-  }
-
+  .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem 1.5rem; margin-bottom: 12px; }
   .field { margin-bottom: 14px; }
   .field label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
   .field-hint { font-size: 12px; color: var(--text-tertiary); margin-top: 4px; }
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   @media (max-width: 600px) { .row { grid-template-columns: 1fr; } }
-
   input[type="text"], input[type="number"], input[type="date"], input[type="datetime-local"], select, textarea {
-    width: 100%; padding: 8px 10px;
-    border: 0.5px solid var(--border); border-radius: var(--radius);
-    font-size: 14px; font-family: inherit;
+    width: 100%; padding: 8px 10px; border: 0.5px solid var(--border);
+    border-radius: var(--radius); font-size: 14px; font-family: inherit;
     background: var(--bg); color: var(--text);
   }
   textarea { resize: vertical; min-height: 80px; }
-  input:focus, select:focus, textarea:focus {
-    outline: none; border-color: var(--border-strong);
-    box-shadow: 0 0 0 2px rgba(0,0,0,0.05);
-  }
-
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--border-strong); box-shadow: 0 0 0 2px rgba(0,0,0,0.05); }
   .deal-row {
     display: flex; align-items: center; gap: 12px;
     padding: 12px 16px; border: 0.5px solid var(--border);
@@ -140,9 +93,7 @@
   .deal-row:hover { border-color: var(--border-strong); }
   .deal-main { flex: 1; min-width: 0; }
   .deal-name { font-weight: 500; font-size: 14px; }
-  .deal-meta { font-size: 12px; color: var(--text-secondary); margin-top: 2px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
+  .deal-meta { font-size: 12px; color: var(--text-secondary); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .temp {
     display: inline-flex; align-items: center; gap: 4px;
     padding: 3px 10px; border-radius: var(--radius);
@@ -151,10 +102,8 @@
   .temp-hot { background: var(--hot-bg); color: var(--hot-text); }
   .temp-warm { background: var(--warm-bg); color: var(--warm-text); }
   .temp-cold { background: var(--cold-bg); color: var(--cold-text); }
-
   .next-date { font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
   .next-date.overdue { color: var(--danger); font-weight: 500; }
-
   .actions { display: flex; gap: 8px; margin-top: 1rem; flex-wrap: wrap; }
   button {
     padding: 9px 18px; border: 0.5px solid var(--border);
@@ -167,7 +116,6 @@
   button.primary { background: var(--text); color: var(--bg); border-color: var(--text); font-weight: 500; }
   button.primary:hover { background: #000; }
   button.danger { color: var(--danger); }
-
   .quote {
     padding: 14px 18px; background: var(--bg);
     border-left: 3px solid var(--gold); border-radius: 0 var(--radius) var(--radius) 0;
@@ -176,7 +124,6 @@
   }
   .quote-text { font-style: italic; font-size: 15px; line-height: 1.5; }
   .quote-meta { font-size: 12px; color: var(--text-secondary); margin-top: 8px; }
-
   .filter-row { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
   .filter-chip {
     padding: 6px 14px; border: 0.5px solid var(--border);
@@ -184,77 +131,43 @@
     background: var(--bg);
   }
   .filter-chip.active { background: var(--text); color: var(--bg); border-color: var(--text); font-weight: 500; }
-
   .empty { text-align: center; padding: 2rem; color: var(--text-secondary); font-size: 14px; }
-  .loading { text-align: center; padding: 2rem; color: var(--text-secondary); font-size: 14px; }
-
   .section-title { font-size: 16px; font-weight: 500; margin: 1.5rem 0 0.75rem; }
-
   .checklist {
     display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px;
     font-size: 13px; margin-top: 12px;
   }
   .check-item { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); }
   .check-item.done { color: var(--text); }
-  .check-item .icon {
-    width: 16px; height: 16px; border-radius: 50%;
-    border: 1.5px solid var(--text-tertiary); display: inline-block; flex-shrink: 0;
-  }
-  .check-item.done .icon {
-    background: var(--success); border-color: var(--success);
-    position: relative;
-  }
-  .check-item.done .icon::after {
-    content: ''; position: absolute;
-    left: 4px; top: 1px; width: 4px; height: 8px;
-    border: solid white; border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
-  }
-
+  .check-item .icon { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--text-tertiary); display: inline-block; flex-shrink: 0; }
+  .check-item.done .icon { background: var(--success); border-color: var(--success); position: relative; }
+  .check-item.done .icon::after { content: ''; position: absolute; left: 4px; top: 1px; width: 4px; height: 8px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg); }
   .need-chip {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 6px 12px; border: 0.5px solid var(--border);
     border-radius: var(--radius); font-size: 13px; cursor: pointer;
-    background: var(--bg); margin: 0 4px 4px 0;
-    user-select: none;
+    background: var(--bg); margin: 0 4px 4px 0; user-select: none;
   }
   .need-chip input { margin: 0; cursor: pointer; }
   .need-chip:hover { background: var(--bg-secondary); }
-
   .modal-bg {
     display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
     z-index: 100; align-items: flex-start; justify-content: center;
     padding: 3rem 1rem; overflow-y: auto;
   }
   .modal-bg.show { display: flex; }
-  .modal {
-    background: var(--bg); border-radius: var(--radius-lg); padding: 1.5rem;
-    max-width: 580px; width: 100%;
-  }
-  .modal-header {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 1rem;
-  }
+  .modal { background: var(--bg); border-radius: var(--radius-lg); padding: 1.5rem; max-width: 580px; width: 100%; }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
   .modal-title { font-size: 18px; font-weight: 500; }
-  .close-btn {
-    background: transparent; border: none; cursor: pointer;
-    padding: 4px 8px; font-size: 20px; line-height: 1; color: var(--text-secondary);
-  }
-
-  .detail-grid {
-    display: grid; grid-template-columns: 140px 1fr;
-    gap: 8px 16px; font-size: 14px;
-  }
+  .close-btn { background: transparent; border: none; cursor: pointer; padding: 4px 8px; font-size: 20px; line-height: 1; color: var(--text-secondary); }
+  .detail-grid { display: grid; grid-template-columns: 140px 1fr; gap: 8px 16px; font-size: 14px; }
   .detail-grid > div:nth-child(odd) { color: var(--text-secondary); }
-
   .gold-marker { color: var(--gold); font-weight: 500; }
-
   .config-warning {
     background: #FAEEDA; color: #633806; padding: 12px 16px;
     border-radius: var(--radius); margin-bottom: 1rem; font-size: 13px;
     border: 0.5px solid #EF9F27;
   }
-
   .toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
     background: var(--text); color: var(--bg); padding: 10px 18px;
@@ -270,7 +183,7 @@
 <div class="app">
   <div class="topbar">
     <div class="brand">FUSIONPOS · CRM</div>
-    <div style="display:flex; gap:12px; align-items:center;">
+    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
       <div class="seller-name">
         <span>Продавец:</span>
         <input type="text" id="seller-name" placeholder="Имя">
@@ -291,7 +204,6 @@
     <div class="tab" data-tab="quotes">Цитаты боли</div>
   </div>
 
-  <!-- DASHBOARD -->
   <div class="panel active" id="panel-dashboard">
     <div class="grid-stats">
       <div class="stat"><div class="stat-label">Всего сделок</div><div class="stat-value" id="stat-total">—</div></div>
@@ -303,7 +215,6 @@
     <div id="upcoming-list"></div>
   </div>
 
-  <!-- DEALS -->
   <div class="panel" id="panel-deals">
     <div class="filter-row">
       <button class="filter-chip active" data-filter="all">Все</button>
@@ -316,7 +227,6 @@
     <div id="deals-list"></div>
   </div>
 
-  <!-- FORM -->
   <div class="panel" id="panel-form">
     <div class="card">
       <div style="font-size:16px;font-weight:500;margin-bottom:1rem">Итог звонка — чек-лист п.11</div>
@@ -493,7 +403,6 @@
     </div>
   </div>
 
-  <!-- QUOTES -->
   <div class="panel" id="panel-quotes">
     <div style="color:var(--text-secondary);margin-bottom:1rem;font-size:13px">
       Дословные цитаты клиентов о боли — то самое золото из скрипта. Хранятся в листе Pain_Quotes.
@@ -502,7 +411,6 @@
   </div>
 </div>
 
-<!-- DETAIL MODAL -->
 <div class="modal-bg" id="detail-modal">
   <div class="modal">
     <div class="modal-header">
@@ -517,7 +425,7 @@
 
 <script>
   // ============================================================
-  // CONFIG — заполните эти две строки после развёртывания Apps Script
+  // CONFIG — заполните после развёртывания Apps Script
   // ============================================================
   const API_URL = 'https://script.google.com/macros/s/AKfycbzcjZ1c8lWkbKUBRO41GocHso8RAXGfBhZMCcPtmOMN1LB7J6F85-GIx9CIHFXjnwSvBg/exec';
   const API_TOKEN = 'fpos_x7Kj9mNqR3vL2pWdF8sH';
@@ -532,28 +440,68 @@
   let deals = [];
   let quotes = [];
   let currentFilter = 'all';
-  let editingId = null;
 
   // ============================================================
-  // API client
+  // JSONP API client — обходит CORS через <script>-теги
   // ============================================================
 
-  async function api(action, body) {
-    if (API_URL.startsWith('PASTE_') || API_TOKEN.startsWith('PASTE_')) {
-      throw new Error('API не настроен — см. README.md');
-    }
-    const url = `${API_URL}?action=${action}&token=${encodeURIComponent(API_TOKEN)}`;
-    const opts = {
-      method: body ? 'POST' : 'GET',
-      // text/plain чтобы избежать CORS preflight в Apps Script
-      headers: body ? { 'Content-Type': 'text/plain;charset=utf-8' } : {},
-      body: body ? JSON.stringify(body) : undefined
-    };
-    const res = await fetch(url, opts);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    return data;
+  let jsonpCounter = 0;
+
+  function api(action, body) {
+    return new Promise((resolve, reject) => {
+      if (API_URL.indexOf('PASTE_') === 0 || API_TOKEN.indexOf('PASTE_') === 0) {
+        reject(new Error('API не настроен — см. README.md'));
+        return;
+      }
+
+      const callbackName = '__jsonp_' + (++jsonpCounter) + '_' + Date.now();
+      const timeoutMs = 20000;
+
+      let finished = false;
+      const cleanup = () => {
+        if (script.parentNode) script.parentNode.removeChild(script);
+        try { delete window[callbackName]; } catch (e) { window[callbackName] = undefined; }
+      };
+
+      const timeoutId = setTimeout(() => {
+        if (finished) return;
+        finished = true;
+        cleanup();
+        reject(new Error('Таймаут запроса (20 сек)'));
+      }, timeoutMs);
+
+      window[callbackName] = function(data) {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timeoutId);
+        cleanup();
+        if (data && data.error) {
+          reject(new Error(data.error));
+        } else {
+          resolve(data);
+        }
+      };
+
+      const params = [
+        'action=' + encodeURIComponent(action),
+        'token=' + encodeURIComponent(API_TOKEN),
+        'callback=' + encodeURIComponent(callbackName)
+      ];
+      if (body) {
+        params.push('data=' + encodeURIComponent(JSON.stringify(body)));
+      }
+
+      const script = document.createElement('script');
+      script.src = API_URL + '?' + params.join('&');
+      script.onerror = () => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timeoutId);
+        cleanup();
+        reject(new Error('Не удалось загрузить ответ'));
+      };
+      document.body.appendChild(script);
+    });
   }
 
   function setSync(state, text) {
@@ -569,24 +517,18 @@
     setTimeout(() => t.className = 'toast' + (isError ? ' error' : ''), 2500);
   }
 
-  // ============================================================
-  // Seller name persistence (in localStorage — это про человека, не про данные)
-  // ============================================================
-
+  // Seller name persistence
   const sellerInput = document.getElementById('seller-name');
   sellerInput.value = localStorage.getItem('fpos_seller') || '';
   sellerInput.addEventListener('change', () => {
     localStorage.setItem('fpos_seller', sellerInput.value);
   });
 
-  // ============================================================
   // Config check
-  // ============================================================
-
-  if (API_URL.startsWith('PASTE_') || API_TOKEN.startsWith('PASTE_')) {
+  if (API_URL.indexOf('PASTE_') === 0 || API_TOKEN.indexOf('PASTE_') === 0) {
     document.getElementById('config-warning-host').innerHTML = `
       <div class="config-warning">
-        <strong>API не настроен.</strong> Откройте этот файл в редакторе и заполните <code>API_URL</code>
+        <strong>API не настроен.</strong> Откройте файл и заполните <code>API_URL</code>
         и <code>API_TOKEN</code> в начале &lt;script&gt;-блока (см. README.md, шаги 5 и 3).
       </div>`;
     setSync('error', 'API не настроен');
@@ -594,30 +536,19 @@
     loadAll();
   }
 
-  // ============================================================
-  // Loading data
-  // ============================================================
-
   async function loadAll() {
     setSync('syncing', 'Загружаем...');
     try {
-      const [dealsResp, quotesResp] = await Promise.all([
-        api('list'),
-        api('quotes')
-      ]);
+      const [dealsResp, quotesResp] = await Promise.all([api('list'), api('quotes')]);
       deals = dealsResp.deals || [];
       quotes = quotesResp.quotes || [];
-      setSync('ok', `Загружено: ${deals.length}`);
+      setSync('ok', 'Загружено: ' + deals.length);
       render();
     } catch (e) {
       setSync('error', 'Ошибка: ' + e.message);
       console.error(e);
     }
   }
-
-  // ============================================================
-  // Tab switching
-  // ============================================================
 
   document.querySelectorAll('.tab').forEach(t => {
     t.addEventListener('click', () => {
@@ -627,10 +558,6 @@
       document.getElementById('panel-' + t.dataset.tab).classList.add('active');
     });
   });
-
-  // ============================================================
-  // Filters
-  // ============================================================
 
   document.querySelectorAll('.filter-chip[data-filter]').forEach(c => {
     c.addEventListener('click', () => {
@@ -643,38 +570,25 @@
 
   document.getElementById('btn-refresh').addEventListener('click', loadAll);
 
-  // ============================================================
-  // Helpers
-  // ============================================================
-
   function isOverdue(d) {
     if (!d.next_date) return false;
     return new Date(d.next_date) < new Date() && d.status !== 'Оплачено' && d.status !== 'Отказ';
   }
-
   function tempBadge(t) {
     if (t === 'hot') return '<span class="temp temp-hot">🔥 Горячий</span>';
     if (t === 'warm') return '<span class="temp temp-warm">Тёплый</span>';
     if (t === 'cold') return '<span class="temp temp-cold">Холодный</span>';
     return '';
   }
-
   function fmtDate(s) {
     if (!s) return '—';
     const d = new Date(s);
     if (isNaN(d)) return '—';
     return d.toLocaleString('ru-RU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
   }
-
   function escapeHtml(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[c]));
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&': '&amp;','<': '&lt;','>': '&gt;','"': '&quot;',"'": '&#39;'}[c]));
   }
-
-  // ============================================================
-  // Render
-  // ============================================================
 
   function render() {
     renderDashboard();
@@ -742,7 +656,6 @@
         <div class="next-date ${isOverdue(d) ? 'overdue' : ''}">${fmtDate(d.next_date)}</div>
       </div>
     `).join('');
-
     el.querySelectorAll('.deal-row').forEach(row => {
       row.addEventListener('click', () => openDetail(row.dataset.id));
     });
@@ -763,10 +676,6 @@
     `).join('');
   }
 
-  // ============================================================
-  // Form
-  // ============================================================
-
   function readForm() {
     const obj = { needs: [] };
     FIELDS.forEach(f => {
@@ -784,13 +693,8 @@
       const el = document.getElementById('f-' + f);
       if (el) {
         let v = deal[f] || '';
-        // Datetime-local needs trimmed ISO without timezone for input
-        if (f === 'next_date' && v) {
-          v = String(v).slice(0, 16);
-        }
-        if (f === 'open_date' && v) {
-          v = String(v).slice(0, 10);
-        }
+        if (f === 'next_date' && v) v = String(v).slice(0, 16);
+        if (f === 'open_date' && v) v = String(v).slice(0, 10);
         el.value = v;
       }
     });
@@ -808,7 +712,6 @@
     FIELDS.forEach(f => { const el = document.getElementById('f-' + f); if (el) el.value = ''; });
     document.querySelectorAll('#f-needs input').forEach(c => c.checked = false);
     document.getElementById('f-id').value = '';
-    editingId = null;
     updateChecklistStatus();
   }
 
@@ -849,7 +752,6 @@
       await api('save', data);
       await loadAll();
       clearForm();
-      // Переключаемся на список
       document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
       document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
       document.querySelector('[data-tab="deals"]').classList.add('active');
@@ -857,15 +759,11 @@
       showToast('Сохранено в Sheets ✓');
     } catch (e) {
       setSync('error', 'Ошибка: ' + e.message);
-      showToast('Ошибка сохранения: ' + e.message, true);
+      showToast('Ошибка: ' + e.message, true);
     }
   });
 
   document.getElementById('btn-clear').addEventListener('click', clearForm);
-
-  // ============================================================
-  // Detail modal
-  // ============================================================
 
   function openDetail(id) {
     const d = deals.find(x => x.id === id);
@@ -902,7 +800,6 @@
 
     document.getElementById('modal-edit').addEventListener('click', () => {
       fillForm(d);
-      editingId = d.id;
       document.getElementById('detail-modal').classList.remove('show');
       document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
       document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
@@ -930,14 +827,12 @@
   document.getElementById('modal-close').addEventListener('click', () => {
     document.getElementById('detail-modal').classList.remove('show');
   });
-
   document.getElementById('detail-modal').addEventListener('click', (e) => {
     if (e.target.id === 'detail-modal') {
       document.getElementById('detail-modal').classList.remove('show');
     }
   });
 
-  // Initial checklist render
   updateChecklistStatus();
 </script>
 
