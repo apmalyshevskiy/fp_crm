@@ -26,12 +26,11 @@
   * { box-sizing: border-box; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    font-size: 14px;
-    color: var(--text);
-    background: var(--bg-tertiary);
+    font-size: 14px; color: var(--text); background: var(--bg-tertiary);
     margin: 0; padding: 0; line-height: 1.5;
   }
   .app { max-width: 1080px; margin: 0 auto; padding: 1rem; }
+  .app.wide { max-width: 100%; }
   .topbar {
     display: flex; align-items: center; justify-content: space-between;
     margin-bottom: 1rem; padding: 0 4px; gap: 12px; flex-wrap: wrap;
@@ -58,8 +57,7 @@
   }
   .tab {
     padding: 12px 18px; cursor: pointer; font-size: 14px;
-    color: var(--text-secondary); border-bottom: 2px solid transparent;
-    user-select: none;
+    color: var(--text-secondary); border-bottom: 2px solid transparent; user-select: none;
   }
   .tab.active { color: var(--text); border-bottom-color: var(--text); font-weight: 500; }
   .panel { display: none; padding: 0 4px 2rem; }
@@ -127,8 +125,7 @@
   .filter-row { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
   .filter-chip {
     padding: 6px 14px; border: 0.5px solid var(--border);
-    border-radius: var(--radius); font-size: 13px; cursor: pointer;
-    background: var(--bg);
+    border-radius: var(--radius); font-size: 13px; cursor: pointer; background: var(--bg);
   }
   .filter-chip.active { background: var(--text); color: var(--bg); border-color: var(--text); font-weight: 500; }
   .empty { text-align: center; padding: 2rem; color: var(--text-secondary); font-size: 14px; }
@@ -156,7 +153,7 @@
     padding: 3rem 1rem; overflow-y: auto;
   }
   .modal-bg.show { display: flex; }
-  .modal { background: var(--bg); border-radius: var(--radius-lg); padding: 1.5rem; max-width: 580px; width: 100%; }
+  .modal { background: var(--bg); border-radius: var(--radius-lg); padding: 1.5rem; max-width: 640px; width: 100%; }
   .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
   .modal-title { font-size: 18px; font-weight: 500; }
   .close-btn { background: transparent; border: none; cursor: pointer; padding: 4px 8px; font-size: 20px; line-height: 1; color: var(--text-secondary); }
@@ -176,11 +173,147 @@
   }
   .toast.show { opacity: 1; }
   .toast.error { background: var(--danger); }
+  .timeline { border-left: 2px solid var(--border); padding-left: 16px; margin: 12px 0 0 8px; }
+  .timeline-item { position: relative; padding-bottom: 14px; }
+  .timeline-item::before {
+    content: ''; position: absolute; left: -22px; top: 6px;
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--bg); border: 2px solid var(--text-secondary);
+  }
+  .timeline-item.latest::before { background: var(--text); border-color: var(--text); }
+  .timeline-head { display: flex; gap: 8px; font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; flex-wrap: wrap; }
+  .timeline-type {
+    padding: 1px 8px; border-radius: var(--radius);
+    background: var(--bg-secondary); font-size: 11px; font-weight: 500; color: var(--text);
+  }
+  .timeline-summary { font-size: 14px; }
+  .form-mode-hint {
+    background: #E6F1FB; color: #0C447C; padding: 10px 14px;
+    border-radius: var(--radius); margin-bottom: 1rem;
+    font-size: 13px; display: flex; align-items: center; gap: 10px; justify-content: space-between;
+  }
+  .checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 14px; padding-top: 6px; }
+  .checkbox-row input { width: auto; }
+
+  /* ==================== KANBAN ==================== */
+  .kanban-wrap {
+    display: flex; gap: 12px;
+    overflow-x: auto; padding-bottom: 12px;
+    min-height: 60vh;
+  }
+  .kanban-col {
+    flex: 0 0 240px; max-width: 240px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    padding: 10px;
+    display: flex; flex-direction: column;
+  }
+  .kanban-col-header {
+    padding: 4px 6px 10px;
+    border-bottom: 0.5px solid var(--border);
+    margin-bottom: 8px;
+  }
+  .kanban-col-title {
+    font-size: 13px; font-weight: 600;
+    color: var(--text);
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 6px;
+  }
+  .kanban-count {
+    background: var(--bg); color: var(--text-secondary);
+    padding: 1px 8px; border-radius: 10px;
+    font-size: 12px; font-weight: 500;
+    border: 0.5px solid var(--border);
+  }
+  .kanban-col-meta {
+    font-size: 11px; color: var(--text-secondary);
+    margin-top: 4px;
+  }
+  .kanban-col-meta.alert { color: var(--danger); font-weight: 500; }
+  .kanban-cards {
+    flex: 1; display: flex; flex-direction: column; gap: 6px;
+    overflow-y: auto; max-height: 70vh;
+  }
+  .kanban-card {
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: border-color 0.1s, transform 0.1s;
+  }
+  .kanban-card:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+  .kanban-card-head {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 6px; margin-bottom: 4px;
+  }
+  .kanban-card-name {
+    font-size: 13px; font-weight: 500; line-height: 1.3;
+    word-break: break-word;
+  }
+  .kanban-card-temp {
+    flex-shrink: 0; font-size: 11px;
+  }
+  .kanban-card-type {
+    font-size: 11px; color: var(--text-secondary);
+    margin-bottom: 6px;
+  }
+  .kanban-card-foot {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 6px; font-size: 11px;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 0.5px dashed var(--border);
+  }
+  .kanban-card-step {
+    color: var(--text-secondary);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    flex: 1; min-width: 0;
+  }
+  .kanban-card-date { color: var(--text-secondary); white-space: nowrap; }
+  .kanban-card-date.overdue { color: var(--danger); font-weight: 500; }
+  .kanban-card-revenue {
+    font-size: 11px; color: var(--text-secondary);
+    margin-top: 2px;
+  }
+  .kanban-empty {
+    color: var(--text-tertiary); font-size: 12px;
+    text-align: center; padding: 1rem;
+    font-style: italic;
+  }
+
+  /* Side blocks (Отказ, Долгий nurture) */
+  .kanban-side { display: flex; flex-direction: column; gap: 8px; flex: 0 0 220px; max-width: 220px; }
+  .kanban-side-block {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    padding: 10px;
+    border: 0.5px solid var(--border);
+  }
+  .kanban-side-header {
+    display: flex; justify-content: space-between; align-items: center;
+    cursor: pointer; user-select: none;
+    font-size: 13px; font-weight: 500;
+  }
+  .kanban-side-header .arrow {
+    transition: transform 0.15s;
+    color: var(--text-secondary);
+  }
+  .kanban-side-block.collapsed .arrow { transform: rotate(-90deg); }
+  .kanban-side-block.collapsed .kanban-cards { display: none; }
+  .kanban-side-block .kanban-cards { margin-top: 10px; max-height: 30vh; }
+
+  /* Kanban legend */
+  .kanban-legend {
+    display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+    font-size: 12px; color: var(--text-secondary);
+    margin-bottom: 12px;
+  }
 </style>
 </head>
 <body>
 
-<div class="app">
+<div class="app" id="app-root">
   <div class="topbar">
     <div class="brand">FUSIONPOS · CRM</div>
     <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
@@ -199,11 +332,13 @@
 
   <div class="tabs">
     <div class="tab active" data-tab="dashboard">Дашборд</div>
+    <div class="tab" data-tab="kanban">Канбан</div>
     <div class="tab" data-tab="deals">Сделки</div>
     <div class="tab" data-tab="form">Итог звонка</div>
     <div class="tab" data-tab="quotes">Цитаты боли</div>
   </div>
 
+  <!-- DASHBOARD -->
   <div class="panel active" id="panel-dashboard">
     <div class="grid-stats">
       <div class="stat"><div class="stat-label">Всего сделок</div><div class="stat-value" id="stat-total">—</div></div>
@@ -215,6 +350,15 @@
     <div id="upcoming-list"></div>
   </div>
 
+  <!-- KANBAN -->
+  <div class="panel" id="panel-kanban">
+    <div class="kanban-legend">
+      <span>Воронка слева направо. Клик по карточке → детали сделки. Чтобы изменить статус — «+ Новое касание».</span>
+    </div>
+    <div class="kanban-wrap" id="kanban-wrap"></div>
+  </div>
+
+  <!-- DEALS -->
   <div class="panel" id="panel-deals">
     <div class="filter-row">
       <button class="filter-chip active" data-filter="all">Все</button>
@@ -227,9 +371,11 @@
     <div id="deals-list"></div>
   </div>
 
+  <!-- FORM -->
   <div class="panel" id="panel-form">
     <div class="card">
-      <div style="font-size:16px;font-weight:500;margin-bottom:1rem">Итог звонка — чек-лист п.11</div>
+      <div id="form-mode-hint-host"></div>
+      <div style="font-size:16px;font-weight:500;margin-bottom:1rem" id="form-title">Итог звонка — чек-лист п.11</div>
 
       <div class="row">
         <div class="field">
@@ -244,16 +390,33 @@
 
       <div class="row">
         <div class="field">
-          <label>Тип заведения</label>
+          <label>Формат заведения</label>
           <select id="f-type">
             <option value="">—</option>
-            <option>Кофейня / пекарня</option>
-            <option>Пиццерия с доставкой</option>
-            <option>Кафе / ресторан с официантами</option>
-            <option>Бар / кальянная</option>
-            <option>Столовая / фастфуд</option>
+            <option>Кофейня</option>
+            <option>Пекарня</option>
+            <option>Кондитерская</option>
+            <option>Кафе</option>
+            <option>Ресторан</option>
+            <option>Пиццерия</option>
+            <option>Суши / роллы</option>
+            <option>Бар</option>
+            <option>Спортбар</option>
+            <option>Караоке / ночной клуб</option>
+            <option>Кальянная</option>
+            <option>Столовая</option>
+            <option>Фаст-фуд</option>
+            <option>Доставка еды</option>
             <option>Фудтрак</option>
-            <option>Магазин</option>
+            <option>Гостиница / отель</option>
+            <option>Магазин (продуктовый)</option>
+            <option>Фрукты / овощи</option>
+            <option>Пивной магазин</option>
+            <option>Винотека</option>
+            <option>Табачный магазин</option>
+            <option>Аптека</option>
+            <option>Цветочный магазин</option>
+            <option>Услуги</option>
             <option>Другое</option>
           </select>
         </div>
@@ -294,9 +457,9 @@
       </div>
 
       <div class="field">
-        <label>Причина смены — дословно <span class="gold-marker">★ золото</span></label>
-        <textarea id="f-pain_quote" rows="3" placeholder="Записываем как сказал клиент. Эти формулировки лучше любого маркетинга."></textarea>
-        <div class="field-hint">Эта цитата автоматически попадёт во вкладку «Цитаты боли» и в лист Pain_Quotes</div>
+        <label>Причина смены / боль — дословно <span class="gold-marker">★ золото</span></label>
+        <textarea id="f-pain_quote" rows="3" placeholder="Записываем как сказал клиент. Каждый звонок может добавить новую цитату."></textarea>
+        <div class="field-hint">Каждое сохранение добавит новую запись в лист Pain_Quotes (старые не затираются)</div>
       </div>
 
       <div class="field">
@@ -329,13 +492,25 @@
           <label>Кто ЛПР</label>
           <select id="f-dm">
             <option value="">—</option>
-            <option>Собеседник</option>
-            <option>Партнёр</option>
+            <option>Собственник</option>
+            <option>Управляющий</option>
             <option>Бухгалтер</option>
             <option>IT</option>
+            <option>Товаровед</option>
+            <option>ЦТО</option>
+            <option>Автоматизатор</option>
+            <option>Наш партнёр</option>
             <option>Другой</option>
           </select>
         </div>
+      </div>
+
+      <div class="field">
+        <label class="checkbox-row">
+          <input type="checkbox" id="f-dm_is_speaker">
+          <span>Звонящий = ЛПР (он сам принимает решение)</span>
+        </label>
+        <div class="field-hint">Если нет — добавьте в «Следующий шаг»: выйти на ЛПР</div>
       </div>
 
       <div class="row">
@@ -391,10 +566,29 @@
         </div>
       </div>
 
+      <div class="section-title" style="font-size:14px;margin-top:1.5rem">Это касание</div>
+      <div class="row">
+        <div class="field">
+          <label>Тип касания</label>
+          <select id="f-activity_type">
+            <option value="call">Звонок</option>
+            <option value="meeting">Встреча</option>
+            <option value="demo">Демо</option>
+            <option value="proposal">Отправка КП</option>
+            <option value="invoice">Выставлен счёт</option>
+            <option value="note">Заметка</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Резюме разговора (что обсудили, итог)</label>
+        <textarea id="f-activity_summary" rows="2" placeholder='Что обсудили в этот раз. Например: "Перезвонил, готов на демо. Просит подключить терминал банка ВТБ."'></textarea>
+      </div>
+
       <input type="hidden" id="f-id">
 
       <div class="actions">
-        <button id="btn-save" class="primary">Сохранить в Sheets</button>
+        <button id="btn-save" class="primary">Сохранить</button>
         <button id="btn-clear">Очистить форму</button>
       </div>
 
@@ -403,9 +597,10 @@
     </div>
   </div>
 
+  <!-- QUOTES -->
   <div class="panel" id="panel-quotes">
     <div style="color:var(--text-secondary);margin-bottom:1rem;font-size:13px">
-      Дословные цитаты клиентов о боли — то самое золото из скрипта. Хранятся в листе Pain_Quotes.
+      Дословные цитаты клиентов о боли — то самое золото из скрипта. Накопительная история.
     </div>
     <div id="quotes-list"></div>
   </div>
@@ -425,79 +620,68 @@
 
 <script>
   // ============================================================
-  // CONFIG — заполните после развёртывания Apps Script
+  // CONFIG
   // ============================================================
-  const API_URL = 'https://script.google.com/macros/s/AKfycbxDNkLNdw1COF0oEhecUqsnD-It34CqkKL032YTC7swx80JHimz-zf1jq43zTd5-IMxkQ/exec';
-  const API_TOKEN = 'fpos_x7Kj9mNqR3vL2pWdF8sH';
+  const API_URL = 'PASTE_YOUR_WEB_APP_URL_HERE';
+  const API_TOKEN = 'PASTE_YOUR_TOKEN_HERE';
   // ============================================================
+
+  // Воронка — порядок колонок канбана
+  const FUNNEL_STATUSES = [
+    'Первичный контакт',
+    'Демо назначено',
+    'Демо проведено',
+    'КП отправлено',
+    'Счёт выставлен',
+    'Оплачено'
+  ];
+  // Боковые блоки
+  const SIDE_STATUSES = ['Отказ', 'Долгий nurture'];
 
   const FIELDS = [
     'client_name', 'phone', 'type', 'points', 'stage', 'open_date',
     'current_system', 'pain_quote', 'temperature', 'dm', 'revenue',
-    'plan', 'hardware', 'status', 'next_step', 'next_date'
+    'plan', 'hardware', 'status', 'next_step', 'next_date',
+    'activity_type', 'activity_summary'
   ];
 
   let deals = [];
   let quotes = [];
   let currentFilter = 'all';
+  let formMode = 'new';
+  const collapsedSide = JSON.parse(localStorage.getItem('fpos_kanban_collapsed') || '{}');
 
-  // ============================================================
-  // JSONP API client — обходит CORS через <script>-теги
-  // ============================================================
-
+  // JSONP API
   let jsonpCounter = 0;
-
   function api(action, body) {
     return new Promise((resolve, reject) => {
       if (API_URL.indexOf('PASTE_') === 0 || API_TOKEN.indexOf('PASTE_') === 0) {
-        reject(new Error('API не настроен — см. README.md'));
-        return;
+        reject(new Error('API не настроен')); return;
       }
-
-      const callbackName = '__jsonp_' + (++jsonpCounter) + '_' + Date.now();
-      const timeoutMs = 20000;
-
+      const cbName = '__jsonp_' + (++jsonpCounter) + '_' + Date.now();
       let finished = false;
       const cleanup = () => {
         if (script.parentNode) script.parentNode.removeChild(script);
-        try { delete window[callbackName]; } catch (e) { window[callbackName] = undefined; }
+        try { delete window[cbName]; } catch (e) { window[cbName] = undefined; }
       };
-
-      const timeoutId = setTimeout(() => {
-        if (finished) return;
-        finished = true;
-        cleanup();
+      const t = setTimeout(() => {
+        if (finished) return; finished = true; cleanup();
         reject(new Error('Таймаут запроса (20 сек)'));
-      }, timeoutMs);
-
-      window[callbackName] = function(data) {
-        if (finished) return;
-        finished = true;
-        clearTimeout(timeoutId);
-        cleanup();
-        if (data && data.error) {
-          reject(new Error(data.error));
-        } else {
-          resolve(data);
-        }
+      }, 20000);
+      window[cbName] = function(data) {
+        if (finished) return; finished = true; clearTimeout(t); cleanup();
+        if (data && data.error) reject(new Error(data.error)); else resolve(data);
       };
-
       const params = [
         'action=' + encodeURIComponent(action),
         'token=' + encodeURIComponent(API_TOKEN),
-        'callback=' + encodeURIComponent(callbackName)
+        'callback=' + encodeURIComponent(cbName)
       ];
-      if (body) {
-        params.push('data=' + encodeURIComponent(JSON.stringify(body)));
-      }
-
+      if (body) params.push('data=' + encodeURIComponent(JSON.stringify(body)));
       const script = document.createElement('script');
       script.src = API_URL + '?' + params.join('&');
       script.onerror = () => {
-        if (finished) return;
-        finished = true;
-        clearTimeout(timeoutId);
-        cleanup();
+        if (finished) return; finished = true; clearTimeout(t); cleanup();
         reject(new Error('Не удалось загрузить ответ'));
       };
       document.body.appendChild(script);
@@ -509,27 +693,21 @@
     el.className = 'sync-status' + (state === 'syncing' ? ' syncing' : state === 'error' ? ' error' : '');
     document.getElementById('sync-text').textContent = text;
   }
-
   function showToast(msg, isError) {
     const t = document.getElementById('toast');
     t.textContent = msg;
     t.className = 'toast show' + (isError ? ' error' : '');
-    setTimeout(() => t.className = 'toast' + (isError ? ' error' : ''), 2500);
+    setTimeout(() => t.className = 'toast' + (isError ? ' error' : ''), 2800);
   }
 
-  // Seller name persistence
   const sellerInput = document.getElementById('seller-name');
   sellerInput.value = localStorage.getItem('fpos_seller') || '';
-  sellerInput.addEventListener('change', () => {
-    localStorage.setItem('fpos_seller', sellerInput.value);
-  });
+  sellerInput.addEventListener('change', () => localStorage.setItem('fpos_seller', sellerInput.value));
 
-  // Config check
   if (API_URL.indexOf('PASTE_') === 0 || API_TOKEN.indexOf('PASTE_') === 0) {
     document.getElementById('config-warning-host').innerHTML = `
       <div class="config-warning">
-        <strong>API не настроен.</strong> Откройте файл и заполните <code>API_URL</code>
-        и <code>API_TOKEN</code> в начале &lt;script&gt;-блока (см. README.md, шаги 5 и 3).
+        <strong>API не настроен.</strong> Заполните <code>API_URL</code> и <code>API_TOKEN</code> в &lt;script&gt;.
       </div>`;
     setSync('error', 'API не настроен');
   } else {
@@ -550,12 +728,17 @@
     }
   }
 
+  // Tab switching — расширяем приложение на канбане
   document.querySelectorAll('.tab').forEach(t => {
     t.addEventListener('click', () => {
       document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
       document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
       t.classList.add('active');
       document.getElementById('panel-' + t.dataset.tab).classList.add('active');
+      // Для канбана убираем ограничение по ширине, чтобы колонки растягивались
+      const appRoot = document.getElementById('app-root');
+      if (t.dataset.tab === 'kanban') appRoot.classList.add('wide');
+      else appRoot.classList.remove('wide');
     });
   });
 
@@ -567,7 +750,6 @@
       renderDeals();
     });
   });
-
   document.getElementById('btn-refresh').addEventListener('click', loadAll);
 
   function isOverdue(d) {
@@ -580,18 +762,34 @@
     if (t === 'cold') return '<span class="temp temp-cold">Холодный</span>';
     return '';
   }
+  function tempBadgeSmall(t) {
+    if (t === 'hot') return '<span class="temp temp-hot kanban-card-temp">🔥</span>';
+    if (t === 'warm') return '<span class="temp temp-warm kanban-card-temp">☕</span>';
+    if (t === 'cold') return '<span class="temp temp-cold kanban-card-temp">❄</span>';
+    return '';
+  }
   function fmtDate(s) {
     if (!s) return '—';
     const d = new Date(s);
     if (isNaN(d)) return '—';
     return d.toLocaleString('ru-RU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
   }
+  function fmtDateShort(s) {
+    if (!s) return '';
+    const d = new Date(s);
+    if (isNaN(d)) return '';
+    return d.toLocaleString('ru-RU', { day: '2-digit', month: 'short' });
+  }
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&': '&amp;','<': '&lt;','>': '&gt;','"': '&quot;',"'": '&#39;'}[c]));
+  }
+  function typeLabel(t) {
+    return {call: 'Звонок', meeting: 'Встреча', demo: 'Демо', proposal: 'КП', invoice: 'Счёт', note: 'Заметка'}[t] || t;
   }
 
   function render() {
     renderDashboard();
+    renderKanban();
     renderDeals();
     renderQuotes();
     updateChecklistStatus();
@@ -607,7 +805,6 @@
       .filter(d => d.next_date && d.status !== 'Оплачено' && d.status !== 'Отказ')
       .sort((a, b) => new Date(a.next_date) - new Date(b.next_date))
       .slice(0, 5);
-
     const list = document.getElementById('upcoming-list');
     if (upcoming.length === 0) {
       list.innerHTML = '<div class="empty">Нет запланированных follow-up</div>';
@@ -628,6 +825,113 @@
     });
   }
 
+  // ==================== KANBAN ====================
+  function kanbanCard(d) {
+    const overdue = isOverdue(d);
+    const revenue = d.revenue ? Number(d.revenue).toLocaleString('ru-RU') + ' ₽/мес' : '';
+    return `
+      <div class="kanban-card" data-id="${escapeHtml(d.id)}">
+        <div class="kanban-card-head">
+          <div class="kanban-card-name">${escapeHtml(d.client_name || 'Без названия')}</div>
+          ${tempBadgeSmall(d.temperature)}
+        </div>
+        ${d.type ? `<div class="kanban-card-type">${escapeHtml(d.type)}${d.points ? ' · ' + escapeHtml(String(d.points)) + ' тч' : ''}</div>` : ''}
+        ${revenue ? `<div class="kanban-card-revenue">${revenue}</div>` : ''}
+        <div class="kanban-card-foot">
+          <div class="kanban-card-step" title="${escapeHtml(d.next_step || '')}">${escapeHtml(d.next_step || 'нет шага')}</div>
+          ${d.next_date ? `<div class="kanban-card-date ${overdue ? 'overdue' : ''}">${fmtDateShort(d.next_date)}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  function kanbanColumnHeader(title, dealsInCol) {
+    const revenueSum = dealsInCol
+      .map(d => Number(d.revenue) || 0)
+      .reduce((a, b) => a + b, 0);
+    const overdueCount = dealsInCol.filter(isOverdue).length;
+    const overdueMsg = overdueCount > 0
+      ? `<div class="kanban-col-meta alert">⚠ Просрочено: ${overdueCount}</div>`
+      : (revenueSum > 0
+          ? `<div class="kanban-col-meta">Σ ${Math.round(revenueSum / 1000).toLocaleString('ru-RU')} тыс ₽/мес</div>`
+          : '');
+    return `
+      <div class="kanban-col-header">
+        <div class="kanban-col-title">
+          <span>${escapeHtml(title)}</span>
+          <span class="kanban-count">${dealsInCol.length}</span>
+        </div>
+        ${overdueMsg}
+      </div>
+    `;
+  }
+
+  function renderKanban() {
+    const wrap = document.getElementById('kanban-wrap');
+
+    // Sort within columns: overdue first, then by next_date asc
+    function sortCol(list) {
+      return list.slice().sort((a, b) => {
+        const ao = isOverdue(a) ? 0 : 1;
+        const bo = isOverdue(b) ? 0 : 1;
+        if (ao !== bo) return ao - bo;
+        const ad = a.next_date ? new Date(a.next_date) : new Date(8.64e15);
+        const bd = b.next_date ? new Date(b.next_date) : new Date(8.64e15);
+        return ad - bd;
+      });
+    }
+
+    // Funnel columns
+    const cols = FUNNEL_STATUSES.map(status => {
+      const inCol = sortCol(deals.filter(d => (d.status || 'Первичный контакт') === status));
+      const cardsHtml = inCol.length === 0
+        ? '<div class="kanban-empty">пусто</div>'
+        : inCol.map(kanbanCard).join('');
+      return `
+        <div class="kanban-col">
+          ${kanbanColumnHeader(status, inCol)}
+          <div class="kanban-cards">${cardsHtml}</div>
+        </div>
+      `;
+    }).join('');
+
+    // Side blocks (collapsible)
+    const sideBlocks = SIDE_STATUSES.map(status => {
+      const inCol = sortCol(deals.filter(d => d.status === status));
+      const isCollapsed = collapsedSide[status] !== false; // default collapsed
+      const cardsHtml = inCol.length === 0
+        ? '<div class="kanban-empty">пусто</div>'
+        : inCol.map(kanbanCard).join('');
+      return `
+        <div class="kanban-side-block ${isCollapsed ? 'collapsed' : ''}" data-status="${escapeHtml(status)}">
+          <div class="kanban-side-header">
+            <span>${escapeHtml(status)} <span class="kanban-count" style="margin-left:6px">${inCol.length}</span></span>
+            <span class="arrow">▼</span>
+          </div>
+          <div class="kanban-cards">${cardsHtml}</div>
+        </div>
+      `;
+    }).join('');
+
+    wrap.innerHTML = cols + '<div class="kanban-side">' + sideBlocks + '</div>';
+
+    // Bind card clicks
+    wrap.querySelectorAll('.kanban-card').forEach(card => {
+      card.addEventListener('click', () => openDetail(card.dataset.id));
+    });
+    // Bind side-block toggles
+    wrap.querySelectorAll('.kanban-side-block').forEach(block => {
+      const header = block.querySelector('.kanban-side-header');
+      header.addEventListener('click', () => {
+        const status = block.dataset.status;
+        block.classList.toggle('collapsed');
+        collapsedSide[status] = block.classList.contains('collapsed');
+        localStorage.setItem('fpos_kanban_collapsed', JSON.stringify(collapsedSide));
+      });
+    });
+  }
+
+  // ==================== DEALS LIST ====================
   function renderDeals() {
     let list = deals.slice();
     if (currentFilter === 'hot') list = list.filter(d => d.temperature === 'hot');
@@ -664,18 +968,19 @@
   function renderQuotes() {
     const el = document.getElementById('quotes-list');
     if (quotes.length === 0) {
-      el.innerHTML = '<div class="empty">Цитат пока нет. Заполняйте поле «причина смены — дословно» в форме итога звонка.</div>';
+      el.innerHTML = '<div class="empty">Цитат пока нет.</div>';
       return;
     }
     const sorted = quotes.slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     el.innerHTML = sorted.map(q => `
       <div class="quote">
         <div class="quote-text">«${escapeHtml(q.quote)}»</div>
-        <div class="quote-meta">${escapeHtml(q.client_name || '')} · ${escapeHtml(q.venue_type || '')} · сейчас: ${escapeHtml(q.current_system || '—')}</div>
+        <div class="quote-meta">${escapeHtml(q.client_name || '')} · ${escapeHtml(q.venue_type || '')} · сейчас: ${escapeHtml(q.current_system || '—')} · ${fmtDate(q.created_at)}</div>
       </div>
     `).join('');
   }
 
+  // ==================== FORM ====================
   function readForm() {
     const obj = { needs: [] };
     FIELDS.forEach(f => {
@@ -683,6 +988,7 @@
       if (el) obj[f] = el.value;
     });
     document.querySelectorAll('#f-needs input:checked').forEach(c => obj.needs.push(c.value));
+    obj.dm_is_speaker = document.getElementById('f-dm_is_speaker').checked;
     obj.seller = sellerInput.value;
     obj.id = document.getElementById('f-id').value || undefined;
     return obj;
@@ -695,6 +1001,9 @@
         let v = deal[f] || '';
         if (f === 'next_date' && v) v = String(v).slice(0, 16);
         if (f === 'open_date' && v) v = String(v).slice(0, 10);
+        if (f === 'activity_type') v = 'call';
+        if (f === 'activity_summary') v = '';
+        if (f === 'pain_quote') v = '';
         el.value = v;
       }
     });
@@ -704,16 +1013,36 @@
       const cb = document.querySelector(`#f-needs input[value="${n}"]`);
       if (cb) cb.checked = true;
     });
+    document.getElementById('f-dm_is_speaker').checked = !!deal.dm_is_speaker;
     document.getElementById('f-id').value = deal.id || '';
     updateChecklistStatus();
   }
 
   function clearForm() {
-    FIELDS.forEach(f => { const el = document.getElementById('f-' + f); if (el) el.value = ''; });
+    FIELDS.forEach(f => {
+      const el = document.getElementById('f-' + f);
+      if (el) el.value = f === 'activity_type' ? 'call' : '';
+    });
     document.querySelectorAll('#f-needs input').forEach(c => c.checked = false);
+    document.getElementById('f-dm_is_speaker').checked = false;
     document.getElementById('f-id').value = '';
+    formMode = 'new';
+    document.getElementById('form-title').textContent = 'Итог звонка — чек-лист п.11';
+    document.getElementById('form-mode-hint-host').innerHTML = '';
     updateChecklistStatus();
   }
+
+  function setContinueMode(deal) {
+    formMode = 'continue';
+    document.getElementById('form-title').textContent = 'Новое касание: ' + (deal.client_name || 'клиент');
+    document.getElementById('form-mode-hint-host').innerHTML = `
+      <div class="form-mode-hint">
+        <span>📝 Продолжаете работу с клиентом <strong>${escapeHtml(deal.client_name || '')}</strong>. Карточка обновится, касание добавится в историю.</span>
+        <button onclick="window.__cancelContinue()">Отмена</button>
+      </div>`;
+  }
+
+  window.__cancelContinue = function() { clearForm(); };
 
   function updateChecklistStatus() {
     const f = readForm();
@@ -747,6 +1076,9 @@
       showToast('Укажите хотя бы название клиента', true);
       return;
     }
+    if (!data.activity_summary || data.activity_summary.trim().length < 3) {
+      if (!confirm('Резюме разговора пустое. Точно сохранить?')) return;
+    }
     setSync('syncing', 'Сохраняем...');
     try {
       await api('save', data);
@@ -756,7 +1088,8 @@
       document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
       document.querySelector('[data-tab="deals"]').classList.add('active');
       document.getElementById('panel-deals').classList.add('active');
-      showToast('Сохранено в Sheets ✓');
+      document.getElementById('app-root').classList.remove('wide');
+      showToast('Сохранено ✓');
     } catch (e) {
       setSync('error', 'Ошибка: ' + e.message);
       showToast('Ошибка: ' + e.message, true);
@@ -765,7 +1098,8 @@
 
   document.getElementById('btn-clear').addEventListener('click', clearForm);
 
-  function openDetail(id) {
+  // ==================== MODAL ====================
+  async function openDetail(id) {
     const d = deals.find(x => x.id === id);
     if (!d) return;
     document.getElementById('modal-title').textContent = d.client_name || 'Без названия';
@@ -774,12 +1108,12 @@
     document.getElementById('modal-body').innerHTML = `
       <div class="detail-grid">
         <div>Телефон</div><div>${escapeHtml(d.phone || '—')}</div>
-        <div>Тип / точек</div><div>${escapeHtml(d.type || '—')} · ${escapeHtml(String(d.points || '—'))}</div>
+        <div>Формат / точек</div><div>${escapeHtml(d.type || '—')} · ${escapeHtml(String(d.points || '—'))}</div>
         <div>Стадия</div><div>${escapeHtml(d.stage || '—')}${d.open_date ? ' · ' + escapeHtml(String(d.open_date).slice(0, 10)) : ''}</div>
         <div>Сейчас на</div><div>${escapeHtml(d.current_system || '—')}</div>
         <div>Потребности</div><div>${needs.map(escapeHtml).join(', ') || '—'}</div>
         <div>Температура</div><div>${tempBadge(d.temperature)}</div>
-        <div>ЛПР</div><div>${escapeHtml(d.dm || '—')}</div>
+        <div>ЛПР</div><div>${escapeHtml(d.dm || '—')}${d.dm_is_speaker ? ' (это звонящий)' : (d.dm ? ' — не звонящий' : '')}</div>
         <div>Оборот</div><div>${d.revenue ? Number(d.revenue).toLocaleString('ru-RU') + ' ₽/мес' : '—'}</div>
         <div>Тариф</div><div>${escapeHtml(d.plan || '—')}</div>
         <div>Оборудование</div><div>${escapeHtml(d.hardware || '—')}</div>
@@ -787,28 +1121,30 @@
         <div>Следующий шаг</div><div>${escapeHtml(d.next_step || '—')}<br><span style="color:var(--text-secondary);font-size:12px">${fmtDate(d.next_date)}</span></div>
         <div>Продавец</div><div>${escapeHtml(d.seller || '—')}</div>
       </div>
-      ${d.pain_quote ? `
-        <div style="margin-top:1rem">
-          <div style="font-size:13px;color:var(--text-secondary);margin-bottom:6px">Цитата боли</div>
-          <div class="quote"><div class="quote-text">«${escapeHtml(d.pain_quote)}»</div></div>
-        </div>` : ''}
       <div class="actions">
-        <button id="modal-edit" class="primary">Редактировать</button>
+        <button id="modal-continue" class="primary">+ Новое касание</button>
+        <button id="modal-edit">Редактировать карточку</button>
         <button id="modal-delete" class="danger">Удалить</button>
       </div>
+      <div class="section-title" style="font-size:14px;margin-top:1.5rem">История касаний</div>
+      <div id="activity-host"><div class="empty">Загружаем...</div></div>
     `;
 
-    document.getElementById('modal-edit').addEventListener('click', () => {
+    function goToForm() {
       fillForm(d);
+      setContinueMode(d);
       document.getElementById('detail-modal').classList.remove('show');
       document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
       document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
       document.querySelector('[data-tab="form"]').classList.add('active');
       document.getElementById('panel-form').classList.add('active');
-    });
+      document.getElementById('app-root').classList.remove('wide');
+    }
 
+    document.getElementById('modal-continue').addEventListener('click', goToForm);
+    document.getElementById('modal-edit').addEventListener('click', goToForm);
     document.getElementById('modal-delete').addEventListener('click', async () => {
-      if (!confirm('Удалить сделку?')) return;
+      if (!confirm('Удалить сделку и всю историю касаний?')) return;
       setSync('syncing', 'Удаляем...');
       try {
         await api('delete', { id: d.id });
@@ -822,15 +1158,39 @@
     });
 
     document.getElementById('detail-modal').classList.add('show');
+
+    try {
+      const resp = await api('activity', { deal_id: d.id });
+      const activity = (resp.activity || []).slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      const host = document.getElementById('activity-host');
+      if (!host) return;
+      if (activity.length === 0) {
+        host.innerHTML = '<div class="empty">История пуста</div>';
+        return;
+      }
+      host.innerHTML = '<div class="timeline">' + activity.map((a, i) => `
+        <div class="timeline-item ${i === 0 ? 'latest' : ''}">
+          <div class="timeline-head">
+            <span class="timeline-type">${escapeHtml(typeLabel(a.type))}</span>
+            <span>${fmtDate(a.created_at)}</span>
+            ${a.seller ? '<span>· ' + escapeHtml(a.seller) + '</span>' : ''}
+            ${a.status_after ? '<span>· → ' + escapeHtml(a.status_after) + '</span>' : ''}
+          </div>
+          <div class="timeline-summary">${escapeHtml(a.summary || '—')}</div>
+          ${a.next_step ? '<div style="font-size:12px;color:var(--text-secondary);margin-top:4px">След. шаг: ' + escapeHtml(a.next_step) + ' · ' + fmtDate(a.next_date) + '</div>' : ''}
+        </div>
+      `).join('') + '</div>';
+    } catch (e) {
+      const host = document.getElementById('activity-host');
+      if (host) host.innerHTML = '<div class="empty">Не удалось загрузить историю: ' + escapeHtml(e.message) + '</div>';
+    }
   }
 
   document.getElementById('modal-close').addEventListener('click', () => {
     document.getElementById('detail-modal').classList.remove('show');
   });
   document.getElementById('detail-modal').addEventListener('click', (e) => {
-    if (e.target.id === 'detail-modal') {
-      document.getElementById('detail-modal').classList.remove('show');
-    }
+    if (e.target.id === 'detail-modal') document.getElementById('detail-modal').classList.remove('show');
   });
 
   updateChecklistStatus();
