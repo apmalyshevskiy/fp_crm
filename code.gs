@@ -1,17 +1,14 @@
 /**
- * FUSIONPOS Mini-CRM — Google Apps Script backend (JSONP v3, с историей касаний)
+ * FUSIONPOS Mini-CRM — Google Apps Script backend (JSONP v4, оптимизированный)
  *
- * Хранит данные в трёх листах:
- *   Deals       — карточки сделок (по одной на клиента)
- *   Activity    — лента касаний (звонки, демо, КП — N записей на сделку)
- *   Pain_Quotes — выгрузка дословных цитат боли
- *
- * Каждое сохранение в форме «Итог звонка»:
- *   1) Обновляет/создаёт строку в Deals
- *   2) Добавляет НОВУЮ запись в Activity (история не затирается)
- *   3) Если есть pain_quote — добавляет НОВУЮ запись в Pain_Quotes
- *
- * ВАЖНО: замените SECRET_TOKEN на свой случайный токен.
+ * Что изменилось vs v3:
+ *  - Новый action `bootstrap` возвращает {deals, quotes} одним запросом.
+ *  - `save` возвращает полный обновлённый deal (фронт не делает loadAll после сохранения).
+ *  - Headers кешируются в памяти скрипта (один доступ к листу за вызов handleRequest).
+ *  - findRowById использует TextFinder (быстрее на больших листах).
+ *  - removeActivityByDeal / removeQuotesByDeal группируют непрерывные диапазоны
+ *    и удаляют их одним deleteRows вместо цикла deleteRow.
+ *  - appendRow заменён на setValues(lastRow+1) — меньше overhead.
  */
 
 const SECRET_TOKEN = 'CHANGE_ME_TO_RANDOM_STRING_AT_LEAST_20_CHARS';
@@ -23,9 +20,11 @@ const SHEET_QUOTES = 'Pain_Quotes';
 const DEAL_COLUMNS = [
   'id', 'created_at', 'updated_at', 'seller',
   'client_name', 'phone', 'type', 'points', 'stage', 'open_date',
-  'current_system', 'pain_quote', 'needs', 'temperature', 'dm',
+  'current_system', 'pain_quote', 'needs', 'needs_text', 'temperature', 'dm',
   'dm_is_speaker', 'revenue', 'plan', 'hardware', 'status',
-  'next_step', 'next_date'
+  'fp_client_id', 'fp_domain', 'fp_version',
+  'next_step', 'next_date',
+  'archived_at'
 ];
 
 const ACTIVITY_COLUMNS = [
@@ -39,6 +38,35 @@ const QUOTE_COLUMNS = [
 ];
 
 // =========================================================================
+// Per-request cache — живёт только во время одного handleRequest
+// =========================================================================
+let _ssCache = null;
+let _sheetCache = {};
+let _headersCache = {};
+
+function ss_() {
+  if (!_ssCache) _ssCache = SpreadsheetApp.getActiveSpreadsheet();
+  return _ssCache;
+}
+function sheet_(name) {
+  if (!_sheetCache[name]) _sheetCache[name] = ss_().getSheetByName(name);
+  return _sheetCache[name];
+}
+function headers_(name) {
+  if (_headersCache[name]) return _headersCache[name];
+  const sh = sheet_(name);
+  const lastCol = sh.getLastColumn();
+  if (lastCol === 0) return (_headersCache[name] = []);
+  _headersCache[name] = sh.getRange(1, 1, 1, lastCol).getValues()[0].map(String);
+  return _headersCache[name];
+}
+function resetCache_() {
+  _ssCache = null;
+  _sheetCache = {};
+  _headersCache = {};
+}
+
+// =========================================================================
 // Entry points
 // =========================================================================
 
@@ -46,6 +74,7 @@ function doGet(e) { return handleRequest(e); }
 function doPost(e) { return handleRequest(e); }
 
 function handleRequest(e) {
+  resetCache_();
   const params = e.parameter || {};
   const callback = params.callback || 'callback';
   const action = params.action;
@@ -67,8 +96,10 @@ function handleRequest(e) {
 
     let result;
     switch (action) {
+      case 'bootstrap':    result = { deals: listDeals(), quotes: listQuotes() }; break;
       case 'list':         result = { deals: listDeals() }; break;
       case 'save':         result = saveCallOutcome(body); break;
+      case 'archive':      result = archiveDeal(body.id, body.archive !== false); break;
       case 'delete':       result = { ok: deleteDeal(body.id) }; break;
       case 'quotes':       result = { quotes: listQuotes() }; break;
       case 'activity':     result = { activity: listActivityForDeal(body.deal_id) }; break;
@@ -96,7 +127,7 @@ function jsonpResponse(callback, obj) {
 // =========================================================================
 
 function ensureSheets() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = ss_();
   ensureSheet(ss, SHEET_DEALS, DEAL_COLUMNS);
   ensureSheet(ss, SHEET_ACTIVITY, ACTIVITY_COLUMNS);
   ensureSheet(ss, SHEET_QUOTES, QUOTE_COLUMNS);
@@ -109,21 +140,27 @@ function ensureSheet(ss, name, columns) {
     sheet.getRange(1, 1, 1, columns.length).setValues([columns]);
     sheet.setFrozenRows(1);
     sheet.getRange(1, 1, 1, columns.length).setFontWeight('bold');
+    _sheetCache[name] = sheet;
+    _headersCache[name] = columns.slice();
     return;
   }
+  _sheetCache[name] = sheet;
   const lastCol = sheet.getLastColumn();
   if (lastCol === 0) {
     sheet.getRange(1, 1, 1, columns.length).setValues([columns]);
     sheet.setFrozenRows(1);
     sheet.getRange(1, 1, 1, columns.length).setFontWeight('bold');
+    _headersCache[name] = columns.slice();
     return;
   }
-  // Add missing columns at the end (so old sheets get new fields automatically)
   const existing = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(String);
   const missing = columns.filter(c => existing.indexOf(c) === -1);
   if (missing.length > 0) {
     sheet.getRange(1, lastCol + 1, 1, missing.length).setValues([missing]);
     sheet.getRange(1, 1, 1, lastCol + missing.length).setFontWeight('bold');
+    _headersCache[name] = existing.concat(missing);
+  } else {
+    _headersCache[name] = existing;
   }
 }
 
@@ -132,47 +169,63 @@ function ensureSheet(ss, name, columns) {
 // =========================================================================
 
 function listDeals() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_DEALS);
+  const sheet = sheet_(SHEET_DEALS);
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return [];
-  const lastCol = sheet.getLastColumn();
-  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(String);
-  const values = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+  const headers = headers_(SHEET_DEALS);
+  const values = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
   return values.map(row => rowToObj(row, headers, ['needs']));
 }
 
+/**
+ * Find row by id using TextFinder — на больших листах в разы быстрее,
+ * чем читать весь столбец A через getValues.
+ */
 function findRowById(sheet, id) {
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return -1;
-  const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
-  for (let i = 0; i < ids.length; i++) {
-    if (ids[i][0] === id) return i + 2;
-  }
-  return -1;
+  if (!id) return -1;
+  const idRange = sheet.getRange('A:A');
+  const finder = idRange.createTextFinder(String(id))
+    .matchEntireCell(true)
+    .matchCase(true);
+  const found = finder.findNext();
+  return found ? found.getRow() : -1;
 }
 
 /**
  * Save call outcome:
- *   - Upsert Deal (one card per client)
- *   - Append new Activity row (history of touches)
- *   - Append new Pain_Quote if pain text provided
+ *   - Upsert Deal
+ *   - Append Activity
+ *   - Append Pain_Quote (если есть текст)
+ * Возвращает полный обновлённый deal — фронт мерджит локально без loadAll.
  */
 function saveCallOutcome(deal) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const dealsSheet = ss.getSheetByName(SHEET_DEALS);
+  const dealsSheet = sheet_(SHEET_DEALS);
   const now = new Date().toISOString();
 
-  // Upsert deal
-  if (!deal.id) {
+  const isNew = !deal.id;
+  if (isNew) {
     deal.id = generateId('d');
     deal.created_at = now;
   }
   deal.updated_at = now;
 
-  const targetRow = findRowById(dealsSheet, deal.id);
+  const targetRow = isNew ? -1 : findRowById(dealsSheet, deal.id);
   if (targetRow < 0 && !deal.created_at) deal.created_at = now;
 
-  const headers = dealsSheet.getRange(1, 1, 1, dealsSheet.getLastColumn()).getValues()[0].map(String);
+  const headers = headers_(SHEET_DEALS);
+
+  // Подтягиваем существующие значения для полей, которых нет в форме
+  // (например, archived_at — оно ставится только через action 'archive').
+  if (targetRow > 0) {
+    const existingRow = dealsSheet.getRange(targetRow, 1, 1, headers.length).getValues()[0];
+    const preserveFields = ['archived_at', 'created_at'];
+    headers.forEach((col, i) => {
+      if (preserveFields.indexOf(col) !== -1 && (deal[col] === undefined || deal[col] === '')) {
+        deal[col] = existingRow[i];
+      }
+    });
+  }
+
   const row = headers.map(col => {
     let v = deal[col];
     if (col === 'needs' && Array.isArray(v)) v = JSON.stringify(v);
@@ -183,10 +236,10 @@ function saveCallOutcome(deal) {
   if (targetRow > 0) {
     dealsSheet.getRange(targetRow, 1, 1, headers.length).setValues([row]);
   } else {
-    dealsSheet.appendRow(row);
+    const newRow = dealsSheet.getLastRow() + 1;
+    dealsSheet.getRange(newRow, 1, 1, headers.length).setValues([row]);
   }
 
-  // Append activity (one row per call/touch)
   const activityId = generateId('a');
   addActivity({
     id: activityId,
@@ -200,24 +253,59 @@ function saveCallOutcome(deal) {
     next_date: deal.next_date || ''
   });
 
-  // Append pain quote (NEW row each time, не затирает прежние)
   if (deal.pain_quote && String(deal.pain_quote).trim().length > 5) {
     appendQuote(deal, activityId);
   }
 
-  return { deal: deal, activity_id: activityId };
+  // Возвращаем deal в том же виде, в каком его отдаёт listDeals
+  // (фронт мерджит этот объект в локальный массив).
+  const dealForClient = {};
+  headers.forEach((col, i) => {
+    let v = row[i];
+    if (col === 'needs' && typeof v === 'string' && v.length > 0) {
+      try { v = JSON.parse(v); } catch (e) { v = v.split(',').map(s => s.trim()); }
+    } else if (col === 'needs') {
+      v = [];
+    }
+    dealForClient[col] = v;
+  });
+
+  return { deal: dealForClient, activity_id: activityId };
 }
 
 function deleteDeal(id) {
   if (!id) return false;
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const dealsSheet = ss.getSheetByName(SHEET_DEALS);
+  const dealsSheet = sheet_(SHEET_DEALS);
   const row = findRowById(dealsSheet, id);
   if (row < 0) return false;
   dealsSheet.deleteRow(row);
-  removeActivityByDeal(id);
-  removeQuotesByDeal(id);
+  removeRowsByDealId_(sheet_(SHEET_ACTIVITY), id, 2);  // deal_id в колонке B
+  removeRowsByDealId_(sheet_(SHEET_QUOTES), id, 2);
   return true;
+}
+
+/**
+ * Soft delete: помечаем колонку archived_at (или очищаем при восстановлении).
+ * Возвращает обновлённый deal, чтобы фронт мог смерджить локально.
+ */
+function archiveDeal(id, archive) {
+  if (!id) return { error: 'no_id' };
+  const dealsSheet = sheet_(SHEET_DEALS);
+  const row = findRowById(dealsSheet, id);
+  if (row < 0) return { error: 'not_found' };
+  const headers = headers_(SHEET_DEALS);
+  const archiveIdx = headers.indexOf('archived_at');
+  if (archiveIdx < 0) return { error: 'no_archived_column' };
+  const value = archive ? new Date().toISOString() : '';
+  // Точечная запись — один setValue на одну ячейку
+  dealsSheet.getRange(row, archiveIdx + 1).setValue(value);
+  // updated_at тоже обновим
+  const updatedIdx = headers.indexOf('updated_at');
+  if (updatedIdx >= 0) dealsSheet.getRange(row, updatedIdx + 1).setValue(new Date().toISOString());
+  // Перечитаем строку для ответа
+  const rowValues = dealsSheet.getRange(row, 1, 1, headers.length).getValues()[0];
+  const deal = rowToObj(rowValues, headers, ['needs']);
+  return { deal: deal };
 }
 
 // =========================================================================
@@ -225,8 +313,8 @@ function deleteDeal(id) {
 // =========================================================================
 
 function addActivity(entry) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_ACTIVITY);
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
+  const sheet = sheet_(SHEET_ACTIVITY);
+  const headers = headers_(SHEET_ACTIVITY);
   const data = {
     id: entry.id || generateId('a'),
     deal_id: entry.deal_id || '',
@@ -240,43 +328,63 @@ function addActivity(entry) {
     next_date: entry.next_date || ''
   };
   const row = headers.map(col => data[col] !== undefined ? data[col] : '');
-  sheet.appendRow(row);
+  const newRow = sheet.getLastRow() + 1;
+  sheet.getRange(newRow, 1, 1, headers.length).setValues([row]);
   return true;
 }
 
 function listActivityForDeal(dealId) {
   if (!dealId) return [];
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_ACTIVITY);
+  const sheet = sheet_(SHEET_ACTIVITY);
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return [];
-  const lastCol = sheet.getLastColumn();
-  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(String);
-  const values = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+  const headers = headers_(SHEET_ACTIVITY);
+  const values = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
   const dealIdx = headers.indexOf('deal_id');
   return values
     .filter(row => row[dealIdx] === dealId)
     .map(row => rowToObj(row, headers, []));
 }
 
-function removeActivityByDeal(dealId) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_ACTIVITY);
+/**
+ * Удаление всех строк, у которых значение в колонке dealIdColNumber == dealId.
+ * Объединяет соседние строки в непрерывные диапазоны и удаляет их одним deleteRows.
+ */
+function removeRowsByDealId_(sheet, dealId, dealIdColNumber) {
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return;
-  const dealIds = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
-  for (let i = dealIds.length - 1; i >= 0; i--) {
-    if (dealIds[i][0] === dealId) {
-      sheet.deleteRow(i + 2);
+  const colValues = sheet.getRange(2, dealIdColNumber, lastRow - 1, 1).getValues();
+
+  // Собираем индексы строк (в координатах листа) для удаления, по убыванию
+  const rowsToDelete = [];
+  for (let i = colValues.length - 1; i >= 0; i--) {
+    if (colValues[i][0] === dealId) rowsToDelete.push(i + 2);
+  }
+  if (rowsToDelete.length === 0) return;
+
+  // Группируем непрерывные диапазоны (rowsToDelete отсортирован по убыванию,
+  // поэтому соседние = разница ровно 1).
+  let i = 0;
+  while (i < rowsToDelete.length) {
+    let end = rowsToDelete[i];   // нижняя граница (большая)
+    let start = end;             // верхняя граница (меньшая) — будем уменьшать
+    let j = i + 1;
+    while (j < rowsToDelete.length && rowsToDelete[j] === start - 1) {
+      start = rowsToDelete[j];
+      j++;
     }
+    sheet.deleteRows(start, end - start + 1);
+    i = j;
   }
 }
 
 // =========================================================================
-// Pain quotes — append-only, накопительная история
+// Pain quotes
 // =========================================================================
 
 function appendQuote(deal, activityId) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_QUOTES);
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
+  const sheet = sheet_(SHEET_QUOTES);
+  const headers = headers_(SHEET_QUOTES);
   const data = {
     id: generateId('q'),
     deal_id: deal.id,
@@ -288,28 +396,16 @@ function appendQuote(deal, activityId) {
     created_at: new Date().toISOString()
   };
   const row = headers.map(col => data[col] !== undefined ? data[col] : '');
-  sheet.appendRow(row);
-}
-
-function removeQuotesByDeal(dealId) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_QUOTES);
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return;
-  const dealIds = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
-  for (let i = dealIds.length - 1; i >= 0; i--) {
-    if (dealIds[i][0] === dealId) {
-      sheet.deleteRow(i + 2);
-    }
-  }
+  const newRow = sheet.getLastRow() + 1;
+  sheet.getRange(newRow, 1, 1, headers.length).setValues([row]);
 }
 
 function listQuotes() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_QUOTES);
+  const sheet = sheet_(SHEET_QUOTES);
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return [];
-  const lastCol = sheet.getLastColumn();
-  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(String);
-  const values = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+  const headers = headers_(SHEET_QUOTES);
+  const values = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
   return values.map(row => rowToObj(row, headers, []));
 }
 
@@ -319,7 +415,8 @@ function listQuotes() {
 
 function rowToObj(row, headers, jsonFields) {
   const obj = {};
-  headers.forEach((col, i) => {
+  for (let i = 0; i < headers.length; i++) {
+    const col = headers[i];
     let v = row[i];
     if (jsonFields.indexOf(col) !== -1 && typeof v === 'string' && v.length > 0) {
       try { v = JSON.parse(v); } catch (e) { v = v.split(',').map(s => s.trim()); }
@@ -328,7 +425,7 @@ function rowToObj(row, headers, jsonFields) {
     }
     if (v instanceof Date) v = v.toISOString();
     obj[col] = v;
-  });
+  }
   return obj;
 }
 

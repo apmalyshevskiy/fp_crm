@@ -29,8 +29,7 @@
     font-size: 14px; color: var(--text); background: var(--bg-tertiary);
     margin: 0; padding: 0; line-height: 1.5;
   }
-  .app { max-width: 1080px; margin: 0 auto; padding: 1rem; }
-  .app.wide { max-width: 100%; }
+  .app { max-width: 1400px; margin: 0 auto; padding: 1rem; }
   .topbar {
     display: flex; align-items: center; justify-content: space-between;
     margin-bottom: 1rem; padding: 0 4px; gap: 12px; flex-wrap: wrap;
@@ -54,12 +53,18 @@
     display: flex; gap: 4px; border-bottom: 0.5px solid var(--border);
     margin-bottom: 1rem; background: var(--bg);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: 0 8px;
+    align-items: center;
   }
   .tab {
     padding: 12px 18px; cursor: pointer; font-size: 14px;
     color: var(--text-secondary); border-bottom: 2px solid transparent; user-select: none;
   }
   .tab.active { color: var(--text); border-bottom-color: var(--text); font-weight: 500; }
+  .tabs-spacer { flex: 1; }
+  .tabs .tabs-cta {
+    margin: 6px 0 6px 8px; padding: 6px 14px; font-size: 13px;
+    border-radius: 18px;
+  }
   .panel { display: none; padding: 0 4px 2rem; }
   .panel.active { display: block; }
   .grid-stats {
@@ -89,6 +94,7 @@
     cursor: pointer; transition: border-color 0.1s;
   }
   .deal-row:hover { border-color: var(--border-strong); }
+  .deal-row.archived { opacity: 0.6; background: var(--bg-secondary); }
   .deal-main { flex: 1; min-width: 0; }
   .deal-name { font-weight: 500; font-size: 14px; }
   .deal-meta { font-size: 12px; color: var(--text-secondary); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -122,12 +128,52 @@
   }
   .quote-text { font-style: italic; font-size: 15px; line-height: 1.5; }
   .quote-meta { font-size: 12px; color: var(--text-secondary); margin-top: 8px; }
-  .filter-row { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
+  .filter-row { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
   .filter-chip {
     padding: 6px 14px; border: 0.5px solid var(--border);
     border-radius: var(--radius); font-size: 13px; cursor: pointer; background: var(--bg);
   }
   .filter-chip.active { background: var(--text); color: var(--bg); border-color: var(--text); font-weight: 500; }
+  /* Сортировка: segmented-control */
+  .sort-control {
+    display: inline-flex; border: 0.5px solid var(--border); border-radius: var(--radius);
+    overflow: hidden; background: var(--bg); font-size: 12px;
+  }
+  .sort-control .sort-label {
+    padding: 6px 10px; color: var(--text-tertiary); border-right: 0.5px solid var(--border);
+    display: inline-flex; align-items: center; background: var(--bg-secondary);
+  }
+  .sort-btn {
+    padding: 6px 12px; cursor: pointer; background: var(--bg);
+    color: var(--text-secondary); border: 0; border-radius: 0;
+    border-right: 0.5px solid var(--border); font-family: inherit; font-size: 12px;
+  }
+  .sort-btn:last-child { border-right: 0; }
+  .sort-btn:hover { background: var(--bg-secondary); }
+  .sort-btn.active { background: var(--text); color: var(--bg); font-weight: 500; }
+  .sort-btn.active:hover { background: var(--text); }
+  .deal-created { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+  /* Поиск */
+  .search-row { margin-bottom: 10px; position: relative; }
+  .search-row input {
+    width: 100%; padding: 10px 36px 10px 36px;
+    background: var(--bg); border: 0.5px solid var(--border);
+    border-radius: var(--radius); font-size: 14px; font-family: inherit;
+    color: var(--text);
+  }
+  .search-row input:focus { outline: none; border-color: var(--border-strong); }
+  .search-row::before {
+    content: '🔍'; position: absolute; left: 12px; top: 50%;
+    transform: translateY(-50%); font-size: 14px; opacity: 0.5; pointer-events: none;
+  }
+  .search-clear {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    background: transparent; border: 0; cursor: pointer; padding: 4px 8px;
+    color: var(--text-tertiary); font-size: 16px; line-height: 1;
+    display: none;
+  }
+  .search-clear:hover { color: var(--text); }
+  .search-row.has-value .search-clear { display: block; }
   .empty { text-align: center; padding: 2rem; color: var(--text-secondary); font-size: 14px; }
   .section-title { font-size: 16px; font-weight: 500; margin: 1.5rem 0 0.75rem; }
   .checklist {
@@ -140,25 +186,65 @@
   .check-item.done .icon { background: var(--success); border-color: var(--success); position: relative; }
   .check-item.done .icon::after { content: ''; position: absolute; left: 4px; top: 1px; width: 4px; height: 8px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg); }
   .need-chip {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 6px 12px; border: 0.5px solid var(--border);
-    border-radius: var(--radius); font-size: 13px; cursor: pointer;
-    background: var(--bg); margin: 0 4px 4px 0; user-select: none;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 12px; border: 0.5px solid var(--border);
+    border-radius: 20px; font-size: 12px; cursor: pointer;
+    background: var(--bg); color: var(--text); user-select: none;
+    min-width: 0; line-height: 1.2;
+    transition: all 0.1s;
+    font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
   }
-  .need-chip input { margin: 0; cursor: pointer; }
-  .need-chip:hover { background: var(--bg-secondary); }
+  .need-chip:focus { outline: none; }
+  .need-chip:focus-visible { outline: 2px solid var(--border-strong); outline-offset: 1px; }
+  .need-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .need-chip::before {
+    content: ''; flex-shrink: 0;
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 1.5px solid var(--text-tertiary);
+    background: var(--bg);
+    transition: all 0.1s;
+  }
+  .need-chip:hover { background: var(--bg-secondary); border-color: var(--border-strong); }
+  .need-chip.checked {
+    background: var(--text); color: var(--bg); border-color: var(--text);
+    font-weight: 500;
+  }
+  .need-chip.checked::before {
+    background: var(--bg); border-color: var(--bg);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M3.5 8.5l3 3 6-7' fill='none' stroke='%231a1a1a' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-size: 12px 12px; background-position: center; background-repeat: no-repeat;
+  }
+  .needs-grid {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px; margin-bottom: 10px;
+  }
+  @media (max-width: 720px) { .needs-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   .modal-bg {
     display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
     z-index: 100; align-items: flex-start; justify-content: center;
-    padding: 3rem 1rem; overflow-y: auto;
+    padding: 2rem 1rem; overflow-y: auto;
   }
   .modal-bg.show { display: flex; }
-  .modal { background: var(--bg); border-radius: var(--radius-lg); padding: 1.5rem; max-width: 640px; width: 100%; }
+  .modal { background: var(--bg); border-radius: var(--radius-lg); padding: 1.5rem; max-width: 880px; width: 100%; }
   .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
   .modal-title { font-size: 18px; font-weight: 500; }
   .close-btn { background: transparent; border: none; cursor: pointer; padding: 4px 8px; font-size: 20px; line-height: 1; color: var(--text-secondary); }
   .detail-grid { display: grid; grid-template-columns: 140px 1fr; gap: 8px 16px; font-size: 14px; }
   .detail-grid > div:nth-child(odd) { color: var(--text-secondary); }
+  /* Sticky-сводка клиента в режиме edit */
+  .client-summary {
+    background: var(--bg-secondary); border-radius: var(--radius);
+    padding: 10px 14px; margin-bottom: 1rem; font-size: 13px;
+    display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline;
+  }
+  .client-summary .name { font-weight: 500; font-size: 14px; color: var(--text); }
+  .client-summary .meta { color: var(--text-secondary); }
+  .client-summary .sep { color: var(--text-tertiary); }
+  /* Тоггл режима view/edit внутри модалки */
+  .modal-view, .modal-edit { display: none; }
+  .modal.mode-view .modal-view { display: block; }
+  .modal.mode-edit .modal-edit { display: block; }
   .gold-marker { color: var(--gold); font-weight: 500; }
   .config-warning {
     background: #FAEEDA; color: #633806; padding: 12px 16px;
@@ -282,7 +368,7 @@
     font-style: italic;
   }
 
-  /* Side blocks (Отказ, Долгий nurture) */
+  /* Side blocks (Отказ, Не сейчас) */
   .kanban-side { display: flex; flex-direction: column; gap: 8px; flex: 0 0 220px; max-width: 220px; }
   .kanban-side-block {
     background: var(--bg-secondary);
@@ -334,8 +420,9 @@
     <div class="tab active" data-tab="dashboard">Дашборд</div>
     <div class="tab" data-tab="kanban">Канбан</div>
     <div class="tab" data-tab="deals">Сделки</div>
-    <div class="tab" data-tab="form">Итог звонка</div>
     <div class="tab" data-tab="quotes">Цитаты боли</div>
+    <div class="tabs-spacer"></div>
+    <button id="btn-new-deal" class="tabs-cta primary">+ Новая сделка</button>
   </div>
 
   <!-- DASHBOARD -->
@@ -344,7 +431,7 @@
       <div class="stat"><div class="stat-label">Всего сделок</div><div class="stat-value" id="stat-total">—</div></div>
       <div class="stat"><div class="stat-label">Горячие</div><div class="stat-value" id="stat-hot" style="color:var(--hot-text)">—</div></div>
       <div class="stat"><div class="stat-label">Тёплые</div><div class="stat-value" id="stat-warm" style="color:var(--warm-text)">—</div></div>
-      <div class="stat"><div class="stat-label">Просрочены follow-up</div><div class="stat-value" id="stat-overdue" style="color:var(--danger)">—</div></div>
+      <div class="stat"><div class="stat-label">Срочно</div><div class="stat-value" id="stat-overdue" style="color:var(--danger)">—</div></div>
     </div>
     <div class="section-title">Ближайшие follow-up</div>
     <div id="upcoming-list"></div>
@@ -360,22 +447,53 @@
 
   <!-- DEALS -->
   <div class="panel" id="panel-deals">
+    <div class="search-row" id="search-row">
+      <input type="search" id="search-input" placeholder="Поиск: название, телефон, ЛПР, система…" autocomplete="off">
+      <button class="search-clear" id="search-clear" title="Очистить">×</button>
+    </div>
     <div class="filter-row">
       <button class="filter-chip active" data-filter="all">Все</button>
       <button class="filter-chip" data-filter="hot">Горячие</button>
       <button class="filter-chip" data-filter="warm">Тёплые</button>
       <button class="filter-chip" data-filter="cold">Холодные</button>
-      <button class="filter-chip" data-filter="overdue">Просроченные</button>
-      <button class="filter-chip" id="btn-refresh" style="margin-left:auto">↻ Обновить</button>
+      <button class="filter-chip" data-filter="overdue">Срочно</button>
+      <button class="filter-chip" data-filter="archived">Архив</button>
+      <div class="sort-control" style="margin-left:auto">
+        <span class="sort-label">Сортировка</span>
+        <button class="sort-btn active" data-sort="created">Новые сверху</button>
+        <button class="sort-btn" data-sort="next">По касанию</button>
+      </div>
+      <button class="filter-chip" id="btn-refresh">↻ Обновить</button>
     </div>
     <div id="deals-list"></div>
   </div>
 
-  <!-- FORM -->
-  <div class="panel" id="panel-form">
-    <div class="card">
+  <!-- QUOTES -->
+  <div class="panel" id="panel-quotes">
+    <div style="color:var(--text-secondary);margin-bottom:1rem;font-size:13px">
+      Дословные цитаты клиентов о боли — то самое золото из скрипта. Накопительная история.
+    </div>
+    <div id="quotes-list"></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="detail-modal">
+  <div class="modal mode-view" id="detail-modal-card">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">—</div>
+      <button class="close-btn" id="modal-close">×</button>
+    </div>
+
+    <!-- РЕЖИМ ПРОСМОТРА: детали + история касаний -->
+    <div class="modal-view" id="modal-body"></div>
+
+    <!-- РЕЖИМ РЕДАКТИРОВАНИЯ / НОВОГО КАСАНИЯ: форма -->
+    <div class="modal-edit" id="modal-edit-pane">
+      <!-- Sticky-сводка клиента (только при редактировании существующей сделки) -->
+      <div class="client-summary" id="edit-client-summary" style="display:none"></div>
+
       <div id="form-mode-hint-host"></div>
-      <div style="font-size:16px;font-weight:500;margin-bottom:1rem" id="form-title">Итог звонка — чек-лист п.11</div>
+      <div style="font-size:16px;font-weight:500;margin-bottom:1rem" id="form-title">Новая сделка</div>
 
       <div class="row">
         <div class="field">
@@ -444,16 +562,24 @@
 
       <div class="field">
         <label>Что используют сейчас</label>
-        <select id="f-current_system">
-          <option value="">—</option>
-          <option>С нуля</option>
-          <option>Эвотор / Атол / касса от банка</option>
-          <option>iiko</option>
-          <option>R-Keeper</option>
-          <option>МойСклад / Контур.Маркет</option>
-          <option>Не знают (бухгалтер)</option>
-          <option>Другое</option>
-        </select>
+        <input type="text" id="f-current_system" list="current-systems" placeholder="Выберите из списка или впишите своё" autocomplete="off">
+        <datalist id="current-systems">
+          <option value="С нуля"></option>
+          <option value="Эвотор / Атол / касса от банка"></option>
+          <option value="МойСклад"></option>
+          <option value="Контур Маркет"></option>
+          <option value="СБИС Presto (Saby Presto)"></option>
+          <option value="1С"></option>
+          <option value="iiko"></option>
+          <option value="R-Keeper"></option>
+          <option value="Quick Resto"></option>
+          <option value="Tillypad"></option>
+          <option value="Restik"></option>
+          <option value="Мой кассир"></option>
+          <option value="YUMA"></option>
+          <option value="Не знают (бухгалтер)"></option>
+          <option value="Другое"></option>
+        </datalist>
       </div>
 
       <div class="field">
@@ -464,18 +590,29 @@
 
       <div class="field">
         <label>Ключевые потребности</label>
-        <div id="f-needs">
-          <label class="need-chip"><input type="checkbox" value="Касса/ФЗ-54"> Касса/ФЗ-54</label>
-          <label class="need-chip"><input type="checkbox" value="Склад"> Склад</label>
-          <label class="need-chip"><input type="checkbox" value="Доставка"> Доставка</label>
-          <label class="need-chip"><input type="checkbox" value="Аналитика"> Аналитика</label>
-          <label class="need-chip"><input type="checkbox" value="ЕГАИС"> ЕГАИС</label>
-          <label class="need-chip"><input type="checkbox" value="Честный знак"> ЧЗ</label>
-          <label class="need-chip"><input type="checkbox" value="Лояльность"> Лояльность</label>
-          <label class="need-chip"><input type="checkbox" value="Экраны кухни"> Экраны кухни</label>
-          <label class="need-chip"><input type="checkbox" value="План зала"> План зала</label>
-          <label class="need-chip"><input type="checkbox" value="1С"> 1С</label>
+        <div id="f-needs" class="needs-grid">
+          <button type="button" class="need-chip" data-value="Касса/ФЗ-54"><span>Касса/ФЗ-54</span></button>
+          <button type="button" class="need-chip" data-value="Склад"><span>Склад</span></button>
+          <button type="button" class="need-chip" data-value="Доставка"><span>Доставка</span></button>
+          <button type="button" class="need-chip" data-value="Аналитика"><span>Аналитика</span></button>
+          <button type="button" class="need-chip" data-value="ЕГАИС"><span>ЕГАИС</span></button>
+          <button type="button" class="need-chip" data-value="Честный знак"><span>ЧЗ</span></button>
+          <button type="button" class="need-chip" data-value="Лояльность"><span>Лояльность</span></button>
+          <button type="button" class="need-chip" data-value="Экраны кухни"><span>Экраны кухни</span></button>
+          <button type="button" class="need-chip" data-value="План зала"><span>План зала</span></button>
+          <button type="button" class="need-chip" data-value="1С"><span>1С</span></button>
+          <button type="button" class="need-chip" data-value="Приложение руководителя"><span>Прил. руководителя</span></button>
+          <button type="button" class="need-chip" data-value="Приложение официанта"><span>Прил. официанта</span></button>
+          <button type="button" class="need-chip" data-value="КСО"><span>КСО</span></button>
+          <button type="button" class="need-chip" data-value="Свой сайт"><span>Свой сайт</span></button>
+          <button type="button" class="need-chip" data-value="Яндекс Еда"><span>Яндекс Еда</span></button>
+          <button type="button" class="need-chip" data-value="Управленческий учёт"><span>Упр. учёт</span></button>
+          <button type="button" class="need-chip" data-value="Бронирование"><span>Бронирование</span></button>
+          <button type="button" class="need-chip" data-value="Предоплата"><span>Предоплата</span></button>
+          <button type="button" class="need-chip" data-value="Telegram-бот"><span>Telegram-бот</span></button>
+          <button type="button" class="need-chip" data-value="Чаевые"><span>Чаевые</span></button>
         </div>
+        <textarea id="f-needs_text" rows="2" placeholder="Дополнительно текстом: что ещё нужно клиенту, нюансы, спец-требования"></textarea>
       </div>
 
       <div class="row">
@@ -551,8 +688,28 @@
           <option>Счёт выставлен</option>
           <option>Оплачено</option>
           <option>Отказ</option>
-          <option>Долгий nurture</option>
+          <option>Не сейчас</option>
         </select>
+      </div>
+
+      <div class="section-title" style="font-size:14px;margin-top:1.5rem">Биллинг FUSIONPOS <span style="font-weight:400;color:var(--text-tertiary);font-size:12px">— заполняется после регистрации клиента</span></div>
+      <div class="row">
+        <div class="field">
+          <label>FP Client ID <span style="color:var(--text-tertiary);font-weight:400">(в биллинге)</span></label>
+          <input type="text" id="f-fp_client_id" placeholder="например, 14823">
+        </div>
+        <div class="field">
+          <label>FP Domain <span style="color:var(--text-tertiary);font-weight:400">(в биллинге)</span></label>
+          <input type="text" id="f-fp_domain" placeholder="client-subdomain">
+        </div>
+      </div>
+      <div class="field">
+        <label>Версия FP по итогу</label>
+        <div style="display:flex;gap:16px;font-size:13px;color:var(--text-secondary);padding:6px 0">
+          <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="fp_version" value=""> не выбрано</label>
+          <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="fp_version" value="3"> FP 3</label>
+          <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="fp_version" value="4"> FP 4</label>
+        </div>
       </div>
 
       <div class="row">
@@ -589,30 +746,12 @@
 
       <div class="actions">
         <button id="btn-save" class="primary">Сохранить</button>
-        <button id="btn-clear">Очистить форму</button>
+        <button id="btn-edit-cancel">Отмена</button>
       </div>
 
       <div class="section-title" style="margin-top:1.5rem;font-size:14px;">Заполнено по чек-листу п.11</div>
       <div class="checklist" id="checklist-status"></div>
     </div>
-  </div>
-
-  <!-- QUOTES -->
-  <div class="panel" id="panel-quotes">
-    <div style="color:var(--text-secondary);margin-bottom:1rem;font-size:13px">
-      Дословные цитаты клиентов о боли — то самое золото из скрипта. Накопительная история.
-    </div>
-    <div id="quotes-list"></div>
-  </div>
-</div>
-
-<div class="modal-bg" id="detail-modal">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title" id="modal-title">—</div>
-      <button class="close-btn" id="modal-close">×</button>
-    </div>
-    <div id="modal-body"></div>
   </div>
 </div>
 
@@ -622,8 +761,8 @@
   // ============================================================
   // CONFIG
   // ============================================================
-  const API_URL = 'PASTE_YOUR_WEB_APP_URL_HERE';
-  const API_TOKEN = 'PASTE_YOUR_TOKEN_HERE';
+  const API_URL = 'https://script.google.com/macros/s/AKfycbwmfwVrRqnUZJQiynG7ugZ1VGHo6wxWp08owmDyDLyActJrLjFrB16PKS9CW0BgD61yaQ/exec';
+  const API_TOKEN = 'fpos_x7Kj9mNqR3vL2pWdF8sH';
   // ============================================================
 
   // Воронка — порядок колонок канбана
@@ -636,18 +775,22 @@
     'Оплачено'
   ];
   // Боковые блоки
-  const SIDE_STATUSES = ['Отказ', 'Долгий nurture'];
+  const SIDE_STATUSES = ['Отказ', 'Не сейчас'];
 
   const FIELDS = [
     'client_name', 'phone', 'type', 'points', 'stage', 'open_date',
-    'current_system', 'pain_quote', 'temperature', 'dm', 'revenue',
-    'plan', 'hardware', 'status', 'next_step', 'next_date',
+    'current_system', 'pain_quote', 'needs_text', 'temperature', 'dm', 'revenue',
+    'plan', 'hardware', 'status',
+    'fp_client_id', 'fp_domain',
+    'next_step', 'next_date',
     'activity_type', 'activity_summary'
   ];
 
   let deals = [];
   let quotes = [];
   let currentFilter = 'all';
+  let currentSort = localStorage.getItem('fpos_deals_sort') || 'created';
+  let currentSearch = '';
   let formMode = 'new';
   const collapsedSide = JSON.parse(localStorage.getItem('fpos_kanban_collapsed') || '{}');
 
@@ -717,15 +860,35 @@
   async function loadAll() {
     setSync('syncing', 'Загружаем...');
     try {
-      const [dealsResp, quotesResp] = await Promise.all([api('list'), api('quotes')]);
-      deals = dealsResp.deals || [];
-      quotes = quotesResp.quotes || [];
+      // Один запрос вместо двух — экономим cold-start Apps Script
+      const resp = await api('bootstrap');
+      deals = (resp.deals || []).map(normalizeDeal);
+      quotes = resp.quotes || [];
       setSync('ok', 'Загружено: ' + deals.length);
       render();
     } catch (e) {
       setSync('error', 'Ошибка: ' + e.message);
       console.error(e);
     }
+  }
+
+  // Миграция старых статусов и нормализация полей при загрузке
+  function normalizeDeal(d) {
+    if (d.status === 'Долгий nurture') d.status = 'Не сейчас';
+    return d;
+  }
+
+  // Локальный merge — фронт обновляет массив deals без перезапроса всего листа
+  function mergeDealLocal(updated) {
+    if (!updated || !updated.id) return;
+    normalizeDeal(updated);
+    const idx = deals.findIndex(x => x.id === updated.id);
+    if (idx >= 0) deals[idx] = updated;
+    else deals.unshift(updated);
+  }
+  function removeDealLocal(id) {
+    deals = deals.filter(d => d.id !== id);
+    quotes = quotes.filter(q => q.deal_id !== id);
   }
 
   // Tab switching — расширяем приложение на канбане
@@ -735,11 +898,51 @@
       document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
       t.classList.add('active');
       document.getElementById('panel-' + t.dataset.tab).classList.add('active');
-      // Для канбана убираем ограничение по ширине, чтобы колонки растягивались
-      const appRoot = document.getElementById('app-root');
-      if (t.dataset.tab === 'kanban') appRoot.classList.add('wide');
-      else appRoot.classList.remove('wide');
     });
+  });
+
+  // Нормализация для поиска: lower-case + только значимые символы
+  function normalizeSearch(s) {
+    return String(s || '').toLowerCase().trim();
+  }
+  // Для телефонов: оставляем только цифры (в базе могут быть скобки, плюсы, пробелы)
+  function digitsOnly(s) {
+    return String(s || '').replace(/\D+/g, '');
+  }
+  // Сопоставление: ищем в name/dm/system — обычный substring;
+  // если запрос похож на цифры — дополнительно ищем по цифрам телефона.
+  function dealMatchesSearch(d, q) {
+    if (!q) return true;
+    const haystack = [d.client_name, d.dm, d.current_system, d.phone]
+      .map(normalizeSearch).join(' \u0001 ');
+    if (haystack.indexOf(q) !== -1) return true;
+    // Если запрос содержит цифры — сверяемся ещё и по нормализованному телефону
+    const qDigits = digitsOnly(q);
+    if (qDigits.length >= 3) {
+      const phoneDigits = digitsOnly(d.phone);
+      if (phoneDigits.indexOf(qDigits) !== -1) return true;
+    }
+    return false;
+  }
+
+  // Поиск: debounce, чтобы не дёргать renderDeals на каждой клавише
+  let _searchTimer = null;
+  const searchInput = document.getElementById('search-input');
+  const searchRow = document.getElementById('search-row');
+  searchInput.addEventListener('input', () => {
+    clearTimeout(_searchTimer);
+    searchRow.classList.toggle('has-value', searchInput.value.length > 0);
+    _searchTimer = setTimeout(() => {
+      currentSearch = normalizeSearch(searchInput.value);
+      renderDeals();
+    }, 200);
+  });
+  document.getElementById('search-clear').addEventListener('click', () => {
+    searchInput.value = '';
+    searchRow.classList.remove('has-value');
+    currentSearch = '';
+    renderDeals();
+    searchInput.focus();
   });
 
   document.querySelectorAll('.filter-chip[data-filter]').forEach(c => {
@@ -750,6 +953,20 @@
       renderDeals();
     });
   });
+
+  // Переключатель сортировки
+  document.querySelectorAll('.sort-btn[data-sort]').forEach(b => {
+    // Восстановить активный из localStorage
+    b.classList.toggle('active', b.dataset.sort === currentSort);
+    b.addEventListener('click', () => {
+      currentSort = b.dataset.sort;
+      localStorage.setItem('fpos_deals_sort', currentSort);
+      document.querySelectorAll('.sort-btn[data-sort]').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      renderDeals();
+    });
+  });
+
   document.getElementById('btn-refresh').addEventListener('click', loadAll);
 
   function isOverdue(d) {
@@ -795,13 +1012,17 @@
     updateChecklistStatus();
   }
 
-  function renderDashboard() {
-    document.getElementById('stat-total').textContent = deals.length;
-    document.getElementById('stat-hot').textContent = deals.filter(d => d.temperature === 'hot').length;
-    document.getElementById('stat-warm').textContent = deals.filter(d => d.temperature === 'warm').length;
-    document.getElementById('stat-overdue').textContent = deals.filter(isOverdue).length;
+  function isArchived(d) { return !!d.archived_at; }
+  function activeDeals() { return deals.filter(d => !isArchived(d)); }
 
-    const upcoming = deals
+  function renderDashboard() {
+    const active = activeDeals();
+    document.getElementById('stat-total').textContent = active.length;
+    document.getElementById('stat-hot').textContent = active.filter(d => d.temperature === 'hot').length;
+    document.getElementById('stat-warm').textContent = active.filter(d => d.temperature === 'warm').length;
+    document.getElementById('stat-overdue').textContent = active.filter(isOverdue).length;
+
+    const upcoming = active
       .filter(d => d.next_date && d.status !== 'Оплачено' && d.status !== 'Отказ')
       .sort((a, b) => new Date(a.next_date) - new Date(b.next_date))
       .slice(0, 5);
@@ -820,9 +1041,7 @@
         <div class="next-date ${isOverdue(d) ? 'overdue' : ''}">${fmtDate(d.next_date)}</div>
       </div>
     `).join('');
-    list.querySelectorAll('.deal-row').forEach(row => {
-      row.addEventListener('click', () => openDetail(row.dataset.id));
-    });
+    // Клики обрабатываются делегированно на #upcoming-list
   }
 
   // ==================== KANBAN ====================
@@ -851,7 +1070,7 @@
       .reduce((a, b) => a + b, 0);
     const overdueCount = dealsInCol.filter(isOverdue).length;
     const overdueMsg = overdueCount > 0
-      ? `<div class="kanban-col-meta alert">⚠ Просрочено: ${overdueCount}</div>`
+      ? `<div class="kanban-col-meta alert">⚠ Срочно: ${overdueCount}</div>`
       : (revenueSum > 0
           ? `<div class="kanban-col-meta">Σ ${Math.round(revenueSum / 1000).toLocaleString('ru-RU')} тыс ₽/мес</div>`
           : '');
@@ -868,6 +1087,7 @@
 
   function renderKanban() {
     const wrap = document.getElementById('kanban-wrap');
+    const source = activeDeals();
 
     // Sort within columns: overdue first, then by next_date asc
     function sortCol(list) {
@@ -883,7 +1103,7 @@
 
     // Funnel columns
     const cols = FUNNEL_STATUSES.map(status => {
-      const inCol = sortCol(deals.filter(d => (d.status || 'Первичный контакт') === status));
+      const inCol = sortCol(source.filter(d => (d.status || 'Первичный контакт') === status));
       const cardsHtml = inCol.length === 0
         ? '<div class="kanban-empty">пусто</div>'
         : inCol.map(kanbanCard).join('');
@@ -897,7 +1117,7 @@
 
     // Side blocks (collapsible)
     const sideBlocks = SIDE_STATUSES.map(status => {
-      const inCol = sortCol(deals.filter(d => d.status === status));
+      const inCol = sortCol(source.filter(d => d.status === status));
       const isCollapsed = collapsedSide[status] !== false; // default collapsed
       const cardsHtml = inCol.length === 0
         ? '<div class="kanban-empty">пусто</div>'
@@ -914,55 +1134,72 @@
     }).join('');
 
     wrap.innerHTML = cols + '<div class="kanban-side">' + sideBlocks + '</div>';
-
-    // Bind card clicks
-    wrap.querySelectorAll('.kanban-card').forEach(card => {
-      card.addEventListener('click', () => openDetail(card.dataset.id));
-    });
-    // Bind side-block toggles
-    wrap.querySelectorAll('.kanban-side-block').forEach(block => {
-      const header = block.querySelector('.kanban-side-header');
-      header.addEventListener('click', () => {
-        const status = block.dataset.status;
-        block.classList.toggle('collapsed');
-        collapsedSide[status] = block.classList.contains('collapsed');
-        localStorage.setItem('fpos_kanban_collapsed', JSON.stringify(collapsedSide));
-      });
-    });
+    // Клики по карточкам и тогглы side-блоков обрабатываются делегированно
+    // на #kanban-wrap (см. инициализацию).
   }
 
   // ==================== DEALS LIST ====================
   function renderDeals() {
-    let list = deals.slice();
+    // По умолчанию архивные скрыты во всех фильтрах кроме "archived"
+    let list = currentFilter === 'archived'
+      ? deals.filter(isArchived)
+      : activeDeals();
+
     if (currentFilter === 'hot') list = list.filter(d => d.temperature === 'hot');
     else if (currentFilter === 'warm') list = list.filter(d => d.temperature === 'warm');
     else if (currentFilter === 'cold') list = list.filter(d => d.temperature === 'cold');
     else if (currentFilter === 'overdue') list = list.filter(isOverdue);
 
-    list.sort((a, b) => {
-      const ad = a.next_date ? new Date(a.next_date) : new Date(8.64e15);
-      const bd = b.next_date ? new Date(b.next_date) : new Date(8.64e15);
-      return ad - bd;
-    });
+    // Поиск — после фильтра по статусу/температуре
+    if (currentSearch) {
+      list = list.filter(d => dealMatchesSearch(d, currentSearch));
+    }
+
+    // Сортировка: 'created' — новые сверху, 'next' — по дате следующего касания
+    if (currentSort === 'next') {
+      list.sort((a, b) => {
+        const ad = a.next_date ? new Date(a.next_date) : new Date(8.64e15);
+        const bd = b.next_date ? new Date(b.next_date) : new Date(8.64e15);
+        return ad - bd;
+      });
+    } else {
+      list.sort((a, b) => {
+        const ad = a.created_at ? new Date(a.created_at) : new Date(0);
+        const bd = b.created_at ? new Date(b.created_at) : new Date(0);
+        return bd - ad;  // новые сверху
+      });
+    }
 
     const el = document.getElementById('deals-list');
     if (list.length === 0) {
-      el.innerHTML = '<div class="empty">Нет сделок под этот фильтр</div>';
+      el.innerHTML = currentSearch
+        ? `<div class="empty">Ничего не найдено по запросу «${escapeHtml(currentSearch)}»</div>`
+        : '<div class="empty">Нет сделок под этот фильтр</div>';
       return;
     }
-    el.innerHTML = list.map(d => `
-      <div class="deal-row" data-id="${escapeHtml(d.id)}">
+    el.innerHTML = list.map(d => {
+      const overdue = isOverdue(d) && !isArchived(d);
+      // Правая колонка: в режиме «по касанию» — next_date с подсветкой просрочки;
+      // в режиме «новые сверху» — дата создания (без подсветки).
+      const rightCol = currentSort === 'next'
+        ? `<div class="next-date ${overdue ? 'overdue' : ''}">${fmtDate(d.next_date)}</div>`
+        : `<div class="next-date" title="Создана">${fmtDateShort(d.created_at)}</div>`;
+      // Под основной строкой показываем «второстепенную» дату — что не на месте справа
+      const subDate = currentSort === 'next'
+        ? (d.created_at ? `Создана ${fmtDateShort(d.created_at)}` : '')
+        : (d.next_date ? `След. ${fmtDate(d.next_date)}` : 'нет следующего шага');
+      return `
+      <div class="deal-row ${isArchived(d) ? 'archived' : ''}" data-id="${escapeHtml(d.id)}">
         <div class="deal-main">
-          <div class="deal-name">${escapeHtml(d.client_name || 'Без названия')}</div>
+          <div class="deal-name">${escapeHtml(d.client_name || 'Без названия')}${isArchived(d) ? ' <span style="color:var(--text-tertiary);font-weight:400;font-size:12px">· архив</span>' : ''}</div>
           <div class="deal-meta">${escapeHtml(d.type || '—')} · ${escapeHtml(d.status || '—')} · ${escapeHtml(d.next_step || 'нет шага')}</div>
+          <div class="deal-created" style="${overdue && currentSort !== 'next' ? 'color:var(--danger)' : ''}">${subDate}</div>
         </div>
         ${tempBadge(d.temperature)}
-        <div class="next-date ${isOverdue(d) ? 'overdue' : ''}">${fmtDate(d.next_date)}</div>
+        ${rightCol}
       </div>
-    `).join('');
-    el.querySelectorAll('.deal-row').forEach(row => {
-      row.addEventListener('click', () => openDetail(row.dataset.id));
-    });
+    `;}).join('');
+    // Клики обрабатываются делегированно на #deals-list
   }
 
   function renderQuotes() {
@@ -987,8 +1224,12 @@
       const el = document.getElementById('f-' + f);
       if (el) obj[f] = el.value;
     });
-    document.querySelectorAll('#f-needs input:checked').forEach(c => obj.needs.push(c.value));
+    document.querySelectorAll('#f-needs .need-chip.checked').forEach(c => {
+      obj.needs.push(c.dataset.value);
+    });
     obj.dm_is_speaker = document.getElementById('f-dm_is_speaker').checked;
+    const fpRadio = document.querySelector('input[name="fp_version"]:checked');
+    obj.fp_version = fpRadio ? fpRadio.value : '';
     obj.seller = sellerInput.value;
     obj.id = document.getElementById('f-id').value || undefined;
     return obj;
@@ -1007,13 +1248,19 @@
         el.value = v;
       }
     });
-    document.querySelectorAll('#f-needs input').forEach(c => c.checked = false);
+    document.querySelectorAll('#f-needs .need-chip').forEach(c => c.classList.remove('checked'));
     const needs = Array.isArray(deal.needs) ? deal.needs : [];
     needs.forEach(n => {
-      const cb = document.querySelector(`#f-needs input[value="${n}"]`);
-      if (cb) cb.checked = true;
+      // CSS.escape — на случай кавычек/спецсимволов в значениях
+      const sel = `#f-needs .need-chip[data-value="${(window.CSS && CSS.escape) ? CSS.escape(n) : n}"]`;
+      const chip = document.querySelector(sel);
+      if (chip) chip.classList.add('checked');
     });
     document.getElementById('f-dm_is_speaker').checked = !!deal.dm_is_speaker;
+    // fp_version радио
+    document.querySelectorAll('input[name="fp_version"]').forEach(r => {
+      r.checked = (String(deal.fp_version || '') === r.value);
+    });
     document.getElementById('f-id').value = deal.id || '';
     updateChecklistStatus();
   }
@@ -1021,10 +1268,16 @@
   function clearForm() {
     FIELDS.forEach(f => {
       const el = document.getElementById('f-' + f);
-      if (el) el.value = f === 'activity_type' ? 'call' : '';
+      if (!el) return;
+      if (f === 'activity_type') el.value = 'call';
+      else if (f === 'status') el.value = 'Первичный контакт';
+      else el.value = '';
     });
-    document.querySelectorAll('#f-needs input').forEach(c => c.checked = false);
+    document.querySelectorAll('#f-needs .need-chip').forEach(c => c.classList.remove('checked'));
     document.getElementById('f-dm_is_speaker').checked = false;
+    document.querySelectorAll('input[name="fp_version"]').forEach(r => {
+      r.checked = (r.value === '');
+    });
     document.getElementById('f-id').value = '';
     formMode = 'new';
     document.getElementById('form-title').textContent = 'Итог звонка — чек-лист п.11';
@@ -1067,8 +1320,48 @@
     `).join('');
   }
 
-  document.getElementById('panel-form').addEventListener('input', updateChecklistStatus);
-  document.getElementById('panel-form').addEventListener('change', updateChecklistStatus);
+  // Debounce: чек-лист пересчитывается не на каждый keystroke,
+  // а через 150 мс после паузы.
+  let _chkTimer = null;
+  function debouncedChecklist() {
+    clearTimeout(_chkTimer);
+    _chkTimer = setTimeout(updateChecklistStatus, 150);
+  }
+  document.getElementById('modal-edit-pane').addEventListener('input', debouncedChecklist);
+  document.getElementById('modal-edit-pane').addEventListener('change', debouncedChecklist);
+
+  // Клик по чипу — toggle класса .checked + триггер пересчёта чек-листа
+  document.getElementById('f-needs').addEventListener('click', e => {
+    const chip = e.target.closest('.need-chip');
+    if (!chip) return;
+    chip.classList.toggle('checked');
+    chip.blur(); // убрать фокусную обводку сразу после клика
+    debouncedChecklist();
+  });
+
+  // Event delegation: один обработчик на контейнер вместо forEach+addEventListener
+  // в каждом render-цикле. Меньше памяти, дешевле перерисовки.
+  document.getElementById('upcoming-list').addEventListener('click', e => {
+    const row = e.target.closest('.deal-row');
+    if (row && row.dataset.id) openDetail(row.dataset.id);
+  });
+  document.getElementById('deals-list').addEventListener('click', e => {
+    const row = e.target.closest('.deal-row');
+    if (row && row.dataset.id) openDetail(row.dataset.id);
+  });
+  document.getElementById('kanban-wrap').addEventListener('click', e => {
+    const sideHeader = e.target.closest('.kanban-side-header');
+    if (sideHeader) {
+      const block = sideHeader.parentElement;
+      const status = block.dataset.status;
+      block.classList.toggle('collapsed');
+      collapsedSide[status] = block.classList.contains('collapsed');
+      localStorage.setItem('fpos_kanban_collapsed', JSON.stringify(collapsedSide));
+      return;
+    }
+    const card = e.target.closest('.kanban-card');
+    if (card && card.dataset.id) openDetail(card.dataset.id);
+  });
 
   document.getElementById('btn-save').addEventListener('click', async () => {
     const data = readForm();
@@ -1081,14 +1374,33 @@
     }
     setSync('syncing', 'Сохраняем...');
     try {
-      await api('save', data);
-      await loadAll();
-      clearForm();
-      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-      document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
-      document.querySelector('[data-tab="deals"]').classList.add('active');
-      document.getElementById('panel-deals').classList.add('active');
-      document.getElementById('app-root').classList.remove('wide');
+      const resp = await api('save', data);
+      // Мерджим обновлённый deal в локальный массив — без loadAll
+      if (resp && resp.deal) mergeDealLocal(resp.deal);
+      // Локально добавим pain-цитату, если она была
+      if (data.pain_quote && String(data.pain_quote).trim().length > 5 && resp && resp.deal) {
+        quotes.unshift({
+          id: 'q_local_' + Date.now(),
+          deal_id: resp.deal.id,
+          activity_id: resp.activity_id || '',
+          client_name: resp.deal.client_name || '',
+          venue_type: resp.deal.type || '',
+          current_system: resp.deal.current_system || '',
+          quote: data.pain_quote,
+          created_at: new Date().toISOString()
+        });
+      }
+      setSync('ok', 'Загружено: ' + deals.length);
+      render();
+      // Возврат в view-режим модалки той же сделки — контекст не теряется
+      if (resp && resp.deal) {
+        currentModalDeal = deals.find(x => x.id === resp.deal.id) || resp.deal;
+        renderModalView(currentModalDeal);
+        loadActivityForCurrentDeal(currentModalDeal.id);
+        setModalMode('view');
+      } else {
+        closeDetailModal();
+      }
       showToast('Сохранено ✓');
     } catch (e) {
       setSync('error', 'Ошибка: ' + e.message);
@@ -1096,71 +1408,168 @@
     }
   });
 
-  document.getElementById('btn-clear').addEventListener('click', clearForm);
+  document.getElementById('btn-edit-cancel').addEventListener('click', () => {
+    // Отмена редактирования. Если есть изменения — спросим подтверждение.
+    if (!confirmDiscardIfDirty()) return;
+    if (currentModalDeal) {
+      // Существующая сделка — возвращаемся в режим view
+      renderModalView(currentModalDeal);
+      loadActivityForCurrentDeal(currentModalDeal.id);
+      setModalMode('view');
+    } else {
+      // Новая сделка — закрываем модалку (форсированно, проверку уже сделали)
+      closeDetailModal(true);
+    }
+  });
 
   // ==================== MODAL ====================
+  // Состояние модалки: текущая сделка в режиме просмотра (null = создание новой)
+  let currentModalDeal = null;
+  // Снимок формы при входе в edit — для проверки несохранённых изменений
+  let editSnapshot = null;
+
+  function snapshotForm() {
+    try { return JSON.stringify(readForm()); }
+    catch (e) { return null; }
+  }
+
+  function isFormDirty() {
+    if (editSnapshot === null) return false;
+    return snapshotForm() !== editSnapshot;
+  }
+
+  function confirmDiscardIfDirty() {
+    const card = document.getElementById('detail-modal-card');
+    // Спрашиваем только если мы в режиме edit и есть изменения
+    if (!card.classList.contains('mode-edit')) return true;
+    if (!isFormDirty()) return true;
+    return confirm('Изменения не сохранены. Закрыть без сохранения?');
+  }
+
+  function setModalMode(mode) {
+    const card = document.getElementById('detail-modal-card');
+    card.classList.toggle('mode-view', mode === 'view');
+    card.classList.toggle('mode-edit', mode === 'edit');
+    // Прокрутим модалку наверх при смене режима
+    document.getElementById('detail-modal').scrollTop = 0;
+    // При входе в edit снимаем snapshot (после того как форма уже заполнена)
+    if (mode === 'edit') {
+      // setTimeout, чтобы snapshot брался после всех DOM-обновлений
+      setTimeout(() => { editSnapshot = snapshotForm(); }, 0);
+    } else {
+      editSnapshot = null;
+    }
+  }
+
+  function closeDetailModal(force) {
+    if (!force && !confirmDiscardIfDirty()) return false;
+    document.getElementById('detail-modal').classList.remove('show');
+    currentModalDeal = null;
+    editSnapshot = null;
+    return true;
+  }
+
+  // Открыть модалку в режиме создания новой сделки
+  function openNewDeal() {
+    currentModalDeal = null;
+    document.getElementById('modal-title').textContent = 'Новая сделка';
+    document.getElementById('edit-client-summary').style.display = 'none';
+    clearForm();
+    document.getElementById('form-title').textContent = 'Новая сделка — итог звонка';
+    setModalMode('edit');
+    document.getElementById('detail-modal').classList.add('show');
+  }
+
+  // Открыть модалку конкретной сделки в режиме view
   async function openDetail(id) {
     const d = deals.find(x => x.id === id);
     if (!d) return;
-    document.getElementById('modal-title').textContent = d.client_name || 'Без названия';
+    currentModalDeal = d;
+    renderModalView(d);
+    setModalMode('view');
+    document.getElementById('detail-modal').classList.add('show');
+    loadActivityForCurrentDeal(d.id);
+  }
 
+  function renderModalView(d) {
     const needs = Array.isArray(d.needs) ? d.needs : [];
+    const archived = isArchived(d);
+    document.getElementById('modal-title').textContent = (d.client_name || 'Без названия') + (archived ? ' · 📦 архив' : '');
     document.getElementById('modal-body').innerHTML = `
       <div class="detail-grid">
         <div>Телефон</div><div>${escapeHtml(d.phone || '—')}</div>
         <div>Формат / точек</div><div>${escapeHtml(d.type || '—')} · ${escapeHtml(String(d.points || '—'))}</div>
         <div>Стадия</div><div>${escapeHtml(d.stage || '—')}${d.open_date ? ' · ' + escapeHtml(String(d.open_date).slice(0, 10)) : ''}</div>
         <div>Сейчас на</div><div>${escapeHtml(d.current_system || '—')}</div>
-        <div>Потребности</div><div>${needs.map(escapeHtml).join(', ') || '—'}</div>
+        <div>Потребности</div><div>${needs.map(escapeHtml).join(', ') || '—'}${d.needs_text ? '<br><span style="color:var(--text-secondary);font-size:13px">' + escapeHtml(d.needs_text) + '</span>' : ''}</div>
         <div>Температура</div><div>${tempBadge(d.temperature)}</div>
         <div>ЛПР</div><div>${escapeHtml(d.dm || '—')}${d.dm_is_speaker ? ' (это звонящий)' : (d.dm ? ' — не звонящий' : '')}</div>
         <div>Оборот</div><div>${d.revenue ? Number(d.revenue).toLocaleString('ru-RU') + ' ₽/мес' : '—'}</div>
         <div>Тариф</div><div>${escapeHtml(d.plan || '—')}</div>
         <div>Оборудование</div><div>${escapeHtml(d.hardware || '—')}</div>
         <div>Статус</div><div>${escapeHtml(d.status || '—')}</div>
+        <div>FP Client ID</div><div>${escapeHtml(d.fp_client_id || '—')}</div>
+        <div>FP Domain</div><div>${escapeHtml(d.fp_domain || '—')}</div>
+        <div>Версия FP</div><div>${d.fp_version ? 'FP ' + escapeHtml(String(d.fp_version)) : '—'}</div>
         <div>Следующий шаг</div><div>${escapeHtml(d.next_step || '—')}<br><span style="color:var(--text-secondary);font-size:12px">${fmtDate(d.next_date)}</span></div>
         <div>Продавец</div><div>${escapeHtml(d.seller || '—')}</div>
+        ${archived ? '<div>В архиве с</div><div>' + fmtDate(d.archived_at) + '</div>' : ''}
       </div>
       <div class="actions">
         <button id="modal-continue" class="primary">+ Новое касание</button>
         <button id="modal-edit">Редактировать карточку</button>
-        <button id="modal-delete" class="danger">Удалить</button>
+        <button id="modal-archive">${archived ? '↺ Восстановить из архива' : '📦 В архив'}</button>
       </div>
       <div class="section-title" style="font-size:14px;margin-top:1.5rem">История касаний</div>
       <div id="activity-host"><div class="empty">Загружаем...</div></div>
     `;
 
-    function goToForm() {
-      fillForm(d);
-      setContinueMode(d);
-      document.getElementById('detail-modal').classList.remove('show');
-      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-      document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
-      document.querySelector('[data-tab="form"]').classList.add('active');
-      document.getElementById('panel-form').classList.add('active');
-      document.getElementById('app-root').classList.remove('wide');
-    }
-
-    document.getElementById('modal-continue').addEventListener('click', goToForm);
-    document.getElementById('modal-edit').addEventListener('click', goToForm);
-    document.getElementById('modal-delete').addEventListener('click', async () => {
-      if (!confirm('Удалить сделку и всю историю касаний?')) return;
-      setSync('syncing', 'Удаляем...');
+    // Кнопки внутри view — переключают на edit (форма уже в DOM)
+    document.getElementById('modal-continue').addEventListener('click', () => switchToEdit(d, 'continue'));
+    document.getElementById('modal-edit').addEventListener('click', () => switchToEdit(d, 'edit'));
+    document.getElementById('modal-archive').addEventListener('click', async () => {
+      const willArchive = !archived;
+      const confirmMsg = willArchive
+        ? 'Архивировать сделку? Она исчезнет из канбана и списков, но будет доступна в фильтре «Архив».'
+        : 'Восстановить сделку из архива?';
+      if (!confirm(confirmMsg)) return;
+      setSync('syncing', willArchive ? 'Архивируем...' : 'Восстанавливаем...');
       try {
-        await api('delete', { id: d.id });
-        document.getElementById('detail-modal').classList.remove('show');
-        await loadAll();
-        showToast('Удалено');
+        const resp = await api('archive', { id: d.id, archive: willArchive });
+        if (resp && resp.deal) mergeDealLocal(resp.deal);
+        closeDetailModal();
+        setSync('ok', 'Загружено: ' + deals.length);
+        render();
+        showToast(willArchive ? 'В архиве 📦' : 'Восстановлено');
       } catch (e) {
         setSync('error', 'Ошибка');
-        showToast('Ошибка удаления: ' + e.message, true);
+        showToast('Ошибка: ' + e.message, true);
       }
     });
+  }
 
-    document.getElementById('detail-modal').classList.add('show');
+  // Переключение из view в edit для существующей сделки
+  function switchToEdit(d, mode) {
+    currentModalDeal = d;
+    fillForm(d);
+    setContinueMode(d);
+    // Sticky-сводка наверху формы
+    const summary = document.getElementById('edit-client-summary');
+    summary.innerHTML = `
+      <span class="name">${escapeHtml(d.client_name || 'Без названия')}</span>
+      ${d.type ? '<span class="sep">·</span><span class="meta">' + escapeHtml(d.type) + '</span>' : ''}
+      ${d.points ? '<span class="sep">·</span><span class="meta">' + escapeHtml(String(d.points)) + ' тч</span>' : ''}
+      ${d.revenue ? '<span class="sep">·</span><span class="meta">' + Number(d.revenue).toLocaleString('ru-RU') + ' ₽/мес</span>' : ''}
+      ${d.status ? '<span class="sep">·</span><span class="meta">' + escapeHtml(d.status) + '</span>' : ''}
+    `;
+    summary.style.display = 'flex';
+    document.getElementById('form-title').textContent = mode === 'continue' ? 'Новое касание' : 'Редактирование карточки';
+    setModalMode('edit');
+  }
 
+  async function loadActivityForCurrentDeal(dealId) {
     try {
-      const resp = await api('activity', { deal_id: d.id });
+      const resp = await api('activity', { deal_id: dealId });
       const activity = (resp.activity || []).slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       const host = document.getElementById('activity-host');
       if (!host) return;
@@ -1186,12 +1595,12 @@
     }
   }
 
-  document.getElementById('modal-close').addEventListener('click', () => {
-    document.getElementById('detail-modal').classList.remove('show');
-  });
-  document.getElementById('detail-modal').addEventListener('click', (e) => {
-    if (e.target.id === 'detail-modal') document.getElementById('detail-modal').classList.remove('show');
-  });
+  document.getElementById('modal-close').addEventListener('click', () => closeDetailModal());
+  // Клик по фону НЕ закрывает модалку — только крестик и кнопки.
+  // Это защищает от потери введённых данных при случайном клике рядом с формой.
+
+  // Кнопка «+ Новая сделка» в шапке
+  document.getElementById('btn-new-deal').addEventListener('click', openNewDeal);
 
   updateChecklistStatus();
 </script>
