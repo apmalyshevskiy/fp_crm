@@ -909,7 +909,7 @@
   //
   // ВАЖНО: если фронт на HTTPS (например GitHub Pages), API тоже должен быть на HTTPS,
   // иначе браузер заблокирует mixed content.
-  const API_URL = 'http://139.100.204.216';
+  const API_URL = '';
   const API_TOKEN = 'fpos_x7Kj9mNqR3vL2pWdF8sH-GIx9CIHFXjnw';
   // ============================================================
 
@@ -1039,7 +1039,53 @@
       throw new Error('HTTP ' + resp.status + ': ' + msg);
     }
     if (!text) return null;
-    try { return JSON.parse(text); } catch (e) { return text; }
+
+    // Workaround: иногда PHP-CRUD-API возвращает два JSON-объекта подряд:
+    //   {"code":9999,"message":"..."}{"records":[...]}
+    // Это происходит из-за двойной обработки запроса в Nginx (известный баг).
+    // Берём ПОСЛЕДНИЙ валидный JSON-объект — это и есть реальный ответ.
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      // Парсим как поток JSON-объектов и берём последний
+      const results = parseConcatenatedJson(text);
+      if (results.length > 0) {
+        // Если последний — ошибка с code:9999, но был и валидный ответ — берём валидный
+        const real = results.filter(o => !(o && typeof o === 'object' && o.code === 9999));
+        return real.length > 0 ? real[real.length - 1] : results[results.length - 1];
+      }
+      return text;
+    }
+  }
+
+  // Парсит склеенные JSON-объекты ({...}{...}) в массив
+  function parseConcatenatedJson(text) {
+    const results = [];
+    let depth = 0;
+    let start = -1;
+    let inString = false;
+    let escape = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (inString) {
+        if (escape) { escape = false; }
+        else if (c === '\\') { escape = true; }
+        else if (c === '"') { inString = false; }
+        continue;
+      }
+      if (c === '"') { inString = true; continue; }
+      if (c === '{') {
+        if (depth === 0) start = i;
+        depth++;
+      } else if (c === '}') {
+        depth--;
+        if (depth === 0 && start >= 0) {
+          try { results.push(JSON.parse(text.slice(start, i + 1))); } catch (e) {}
+          start = -1;
+        }
+      }
+    }
+    return results;
   }
 
   // ID-генератор на клиенте (раньше его делал Apps Script)
@@ -1190,20 +1236,27 @@
       }
       deal.updated_at = nowMysql;
 
-      // Проверка: существует ли запись (для решения POST vs PATCH)
-      let exists = false;
+      // Проверка: существует ли запись (для решения POST vs PUT)
+      // Также сохраняем текущее состояние для мёрджа (PUT — это полная замена)
+      let existing = null;
       if (!isNew) {
         try {
-          await rest('GET', '/records/deals/' + encodeURIComponent(deal.id));
-          exists = true;
+          existing = await rest('GET', '/records/deals/' + encodeURIComponent(deal.id));
         } catch (e) {
           // 404 — записи нет, создадим
-          exists = false;
+          existing = null;
         }
       }
 
-      if (exists) {
-        await rest('PATCH', '/records/deals/' + encodeURIComponent(deal.id), deal);
+      if (existing) {
+        // PUT — полная замена. Мёрджим: сначала старое, поверх — то что прислал фронт.
+        // ВАЖНО: PUT-запрос в URL содержит /id, поле id в теле не отправляется (PHP-CRUD-API его игнорирует).
+        // Используем PUT вместо PATCH из-за бага PHP-CRUD-API:
+        //   "SQLSTATE[HY093]: Invalid parameter number" — баг при PATCH с одним полем.
+        const merged = Object.assign({}, existing, deal);
+        // id убираем из тела — он есть в URL
+        delete merged.id;
+        await rest('PUT', '/records/deals/' + encodeURIComponent(deal.id), merged);
       } else {
         await rest('POST', '/records/deals', deal);
       }
@@ -1248,9 +1301,18 @@
 
     if (action === 'archive') {
       // Soft delete: archived_at = now или null
+      // Используем PUT (полную замену), потому что PATCH в PHP-CRUD-API глючит на одиночных полях.
       const archive = body.archive !== false;
-      const patch = { archived_at: archive ? toMysqlDateTime(new Date().toISOString()) : null };
-      await rest('PATCH', '/records/deals/' + encodeURIComponent(body.id), patch);
+      const newArchivedAt = archive ? toMysqlDateTime(new Date().toISOString()) : null;
+
+      const existing = await rest('GET', '/records/deals/' + encodeURIComponent(body.id));
+      const merged = Object.assign({}, existing, {
+        archived_at: newArchivedAt,
+        updated_at: toMysqlDateTime(new Date().toISOString())
+      });
+      delete merged.id;
+      await rest('PUT', '/records/deals/' + encodeURIComponent(body.id), merged);
+
       const fresh = await rest('GET', '/records/deals/' + encodeURIComponent(body.id));
       fresh.needs = parseNeeds(fresh.needs);
       return { deal: fresh };

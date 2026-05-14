@@ -1,29 +1,45 @@
-# FUSIONPOS CRM API — конфиг Nginx
+# FUSIONPOS CRM API + статика
 #
-# Путь на сервере: /etc/nginx/sites-available/crm-api
+# Путь: /etc/nginx/sites-available/crm-api
+# После замены: sudo nginx -t && sudo systemctl reload nginx
 #
-# Если PHP не 8.3 — поменяйте строку с fastcgi_pass на свою версию.
-# Проверить версию: ls /var/run/php/
+# Поменяйте версию PHP в fastcgi_pass, если у вас не 8.3.
 
 server {
     listen 80;
     server_name _;
 
     root /var/www/crm-api;
-    index api.include.php;
 
-    # Все запросы передаются на api.include.php
-    location / {
-        try_files $uri $uri/ /api.include.php$is_args$args;
+    # api.php — это библиотека PHP-CRUD-API, она НЕ должна быть entry point.
+    # Запрещаем прямой доступ к ней.
+    location = /api.php {
+        deny all;
+        return 404;
     }
 
-    # Обработчик PHP
-    location ~ \.php$ {
+    # Прямой доступ к api.include.php — это наш entry point для PHP-CRUD-API
+    location = /api.include.php {
         include snippets/fastcgi-php.conf;
         fastcgi_pass unix:/var/run/php/php8.3-fpm.sock;
     }
 
-    # Закрываем доступ к скрытым файлам (.git, .env и т.п.)
+    # Статика (HTML, CSS, JS, картинки) — отдаётся напрямую если файл существует.
+    # Любые «непонятные» URL (/records/, /openapi, /status/, /columns/ и т.п.) — в api.include.php
+    location / {
+        try_files $uri @api;
+    }
+
+    location @api {
+        rewrite ^(.*)$ /api.include.php last;
+    }
+
+    # Запрет на любые другие .php файлы (мера предосторожности)
+    location ~ \.php$ {
+        deny all;
+        return 404;
+    }
+
     location ~ /\. {
         deny all;
     }
