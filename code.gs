@@ -24,6 +24,8 @@ const DEAL_COLUMNS = [
   'dm_is_speaker', 'revenue', 'plan', 'hardware', 'status',
   'fp_client_id', 'fp_domain', 'fp_version',
   'next_step', 'next_date',
+  'rejection_category', 'rejection_reason', 'rejection_reason_other',
+  'rejection_quote', 'can_reanimate', 'reanimate_after_date',
   'archived_at'
 ];
 
@@ -104,6 +106,7 @@ function handleRequest(e) {
       case 'quotes':       result = { quotes: listQuotes() }; break;
       case 'activity':     result = { activity: listActivityForDeal(body.deal_id) }; break;
       case 'add_activity': result = { ok: addActivity(body) }; break;
+      case 'rejection_stats': result = rejectionStats(); break;
       case 'ping':         result = { ok: true, ts: new Date().toISOString() }; break;
       default:             result = { error: 'unknown_action', action: action };
     }
@@ -306,6 +309,100 @@ function archiveDeal(id, archive) {
   const rowValues = dealsSheet.getRange(row, 1, 1, headers.length).getValues()[0];
   const deal = rowToObj(rowValues, headers, ['needs']);
   return { deal: deal };
+}
+
+// =========================================================================
+// Rejection analytics — агрегированная сводка по отказам и реанимациям
+// =========================================================================
+
+/**
+ * Возвращает три блока:
+ *   - by_category:   [{category, count}]                 — частота категорий
+ *   - by_reason:     [{category, reason, count, quotes}] — частота конкретных причин с цитатами
+ *   - by_competitor: [{competitor, count}]               — выбранные конкуренты (категория "Уже выбрали конкурента")
+ *   - reanimation:   [{id, client_name, ...}]            — отказы с can_reanimate=true (сортированы по reanimate_after_date)
+ *
+ * Считается на сервере, чтобы фронт не лопатил весь список deals на больших данных.
+ */
+function rejectionStats() {
+  const sheet = sheet_(SHEET_DEALS);
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return { by_category: [], by_reason: [], by_competitor: [], reanimation: [] };
+
+  const headers = headers_(SHEET_DEALS);
+  const values = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
+
+  // Индексы колонок (один раз)
+  const idx = {};
+  headers.forEach((h, i) => { idx[h] = i; });
+
+  const byCategory = {};
+  const byReason = {};
+  const byCompetitor = {};
+  const reanimation = [];
+
+  values.forEach(row => {
+    const status = row[idx.status];
+    if (status !== 'Отказ') return;
+
+    const cat = row[idx.rejection_category] || 'Не указано';
+    byCategory[cat] = (byCategory[cat] || 0) + 1;
+
+    const reason = row[idx.rejection_reason] || '';
+    if (reason) {
+      const key = cat + ' / ' + reason;
+      if (!byReason[key]) byReason[key] = { category: cat, reason: reason, count: 0, quotes: [] };
+      byReason[key].count++;
+      const q = row[idx.rejection_quote];
+      if (q && byReason[key].quotes.length < 5) byReason[key].quotes.push(String(q));
+    }
+
+    // Отдельный срез по конкурентам — там подпричина и есть имя конкурента
+    if (cat === 'Уже выбрали конкурента' && reason) {
+      byCompetitor[reason] = (byCompetitor[reason] || 0) + 1;
+    }
+
+    if (row[idx.can_reanimate]) {
+      reanimation.push({
+        id: row[idx.id],
+        client_name: row[idx.client_name],
+        type: row[idx.type],
+        phone: row[idx.phone],
+        rejection_category: cat,
+        rejection_reason: reason,
+        rejection_reason_other: row[idx.rejection_reason_other],
+        rejection_quote: row[idx.rejection_quote],
+        reanimate_after_date: row[idx.reanimate_after_date] instanceof Date
+          ? row[idx.reanimate_after_date].toISOString()
+          : row[idx.reanimate_after_date]
+      });
+    }
+  });
+
+  const byCategoryList = Object.keys(byCategory)
+    .map(k => ({ category: k, count: byCategory[k] }))
+    .sort((a, b) => b.count - a.count);
+
+  const byReasonList = Object.keys(byReason)
+    .map(k => byReason[k])
+    .sort((a, b) => b.count - a.count);
+
+  const byCompetitorList = Object.keys(byCompetitor)
+    .map(k => ({ competitor: k, count: byCompetitor[k] }))
+    .sort((a, b) => b.count - a.count);
+
+  reanimation.sort((a, b) => {
+    const ad = a.reanimate_after_date ? new Date(a.reanimate_after_date) : new Date(8.64e15);
+    const bd = b.reanimate_after_date ? new Date(b.reanimate_after_date) : new Date(8.64e15);
+    return ad - bd;
+  });
+
+  return {
+    by_category: byCategoryList,
+    by_reason: byReasonList,
+    by_competitor: byCompetitorList,
+    reanimation: reanimation
+  };
 }
 
 // =========================================================================

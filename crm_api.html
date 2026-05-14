@@ -898,10 +898,19 @@
 
 <script>
   // ============================================================
-  // CONFIG
+  // CONFIG — PHP-CRUD-API backend
   // ============================================================
-  const API_URL = 'https://script.google.com/macros/s/AKfycbx9G4GAhjEI4Ugy-vyQbdAdVvpIcA_wPiD6Xf7w8u2qW51WpV1IAm2MbigucdYgilZJ/exec';
-  const API_TOKEN = 'fpos_x7Kj9mNqR3vL2pWdF8sH';
+  // API_URL — корень API, без / на конце. Пример: 'http://78.155.207.123'
+  //   Если API на поддомене с HTTPS: 'https://api.fusionpos.ru'
+  //   Дальше прототип сам добавит /records/deals и т.д.
+  //
+  // API_TOKEN — тот же токен, что указан в /var/www/crm-api/api.include.php
+  //   в параметре apiKeyAuth.keys
+  //
+  // ВАЖНО: если фронт на HTTPS (например GitHub Pages), API тоже должен быть на HTTPS,
+  // иначе браузер заблокирует mixed content.
+  const API_URL = 'http://139.100.204.216';
+  const API_TOKEN = 'fpos_x7Kj9mNqR3vL2pWdF8sH-GIx9CIHFXjnw';
   // ============================================================
 
   // Воронка — порядок колонок канбана
@@ -984,41 +993,354 @@
   let formMode = 'new';
   const collapsedSide = JSON.parse(localStorage.getItem('fpos_kanban_collapsed') || '{}');
 
-  // JSONP API
-  let jsonpCounter = 0;
-  function api(action, body) {
-    return new Promise((resolve, reject) => {
-      if (API_URL.indexOf('PASTE_') === 0 || API_TOKEN.indexOf('PASTE_') === 0) {
-        reject(new Error('API не настроен')); return;
+  // REST API client to PHP-CRUD-API
+  // ВАЖНО: оставляем тот же интерфейс api(action, body), чтобы остальной код не менять.
+  // Под капотом — несколько HTTP-запросов к PHP-CRUD-API.
+  //
+  // Эндпоинты PHP-CRUD-API:
+  //   GET    /records/deals?...           — список (с фильтрами/сортировкой/пагинацией)
+  //   GET    /records/deals/{id}          — одна запись
+  //   POST   /records/deals               — создать (тело — JSON без id, либо с)
+  //   PUT    /records/deals/{id}          — заменить полностью
+  //   PATCH  /records/deals/{id}          — обновить частично
+  //   DELETE /records/deals/{id}          — удалить
+  //
+  // Авторизация: заголовок X-API-Key.
+
+  async function rest(method, path, body, query) {
+    if (API_URL.indexOf('PASTE_') === 0 || API_TOKEN.indexOf('PASTE_') === 0) {
+      throw new Error('API не настроен');
+    }
+    let url = API_URL.replace(/\/+$/, '') + path;
+    if (query) {
+      const qs = Object.keys(query).map(k => {
+        const v = query[k];
+        // Array → повторённые ключи (filter=a&filter=b)
+        if (Array.isArray(v)) return v.map(x => encodeURIComponent(k) + '=' + encodeURIComponent(x)).join('&');
+        return encodeURIComponent(k) + '=' + encodeURIComponent(v);
+      }).join('&');
+      if (qs) url += (url.indexOf('?') >= 0 ? '&' : '?') + qs;
+    }
+    const opts = {
+      method: method,
+      headers: { 'X-API-Key': API_TOKEN, 'Accept': 'application/json' },
+      mode: 'cors'
+    };
+    if (body !== undefined && body !== null) {
+      opts.headers['Content-Type'] = 'application/json';
+      opts.body = JSON.stringify(body);
+    }
+    const resp = await fetch(url, opts);
+    const text = await resp.text();
+    if (!resp.ok) {
+      // PHP-CRUD-API при ошибке возвращает JSON { code, message }
+      let msg = text;
+      try { const j = JSON.parse(text); if (j && j.message) msg = j.message; } catch (e) {}
+      throw new Error('HTTP ' + resp.status + ': ' + msg);
+    }
+    if (!text) return null;
+    try { return JSON.parse(text); } catch (e) { return text; }
+  }
+
+  // ID-генератор на клиенте (раньше его делал Apps Script)
+  function makeId(prefix) {
+    return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
+  }
+
+  // Парсинг массивов из JSON-строк (поле needs хранится как JSON-строка в TEXT)
+  function parseNeeds(raw) {
+    if (Array.isArray(raw)) return raw;
+    if (!raw) return [];
+    try {
+      const v = JSON.parse(raw);
+      return Array.isArray(v) ? v : [];
+    } catch (e) {
+      // legacy: запятая
+      return String(raw).split(',').map(s => s.trim()).filter(Boolean);
+    }
+  }
+
+  // Числовые и булевы поля — для них пустая строка '' = null
+  // (HTML input type=number отдаёт '' если пусто, а MariaDB это не принимает)
+  const NUMERIC_FIELDS = ['points', 'revenue'];
+  const BOOLEAN_FIELDS = ['dm_is_speaker', 'can_reanimate'];
+  const DATE_FIELDS = ['open_date', 'reanimate_after_date'];
+  const DATETIME_FIELDS = ['next_date', 'created_at', 'updated_at', 'archived_at'];
+
+  // Готовим объект сделки для отправки в БД:
+  // - undefined / '' для нестроковых полей → null
+  // - needs из массива в JSON-строку
+  // - даты приводим к нужному виду
+  // - булевы (dm_is_speaker, can_reanimate) → 0/1
+  function serializeDeal(d) {
+    const out = {};
+    Object.keys(d).forEach(k => {
+      let v = d[k];
+
+      // undefined всегда → null
+      if (v === undefined) v = null;
+
+      // Пустая строка для числовых, булевых, дат → null (MariaDB не принимает '')
+      if (v === '' && (
+        NUMERIC_FIELDS.indexOf(k) !== -1 ||
+        BOOLEAN_FIELDS.indexOf(k) !== -1 ||
+        DATE_FIELDS.indexOf(k) !== -1 ||
+        DATETIME_FIELDS.indexOf(k) !== -1
+      )) {
+        v = null;
       }
-      const cbName = '__jsonp_' + (++jsonpCounter) + '_' + Date.now();
-      let finished = false;
-      const cleanup = () => {
-        if (script.parentNode) script.parentNode.removeChild(script);
-        try { delete window[cbName]; } catch (e) { window[cbName] = undefined; }
-      };
-      const t = setTimeout(() => {
-        if (finished) return; finished = true; cleanup();
-        reject(new Error('Таймаут запроса (20 сек)'));
-      }, 20000);
-      window[cbName] = function(data) {
-        if (finished) return; finished = true; clearTimeout(t); cleanup();
-        if (data && data.error) reject(new Error(data.error)); else resolve(data);
-      };
-      const params = [
-        'action=' + encodeURIComponent(action),
-        'token=' + encodeURIComponent(API_TOKEN),
-        'callback=' + encodeURIComponent(cbName)
-      ];
-      if (body) params.push('data=' + encodeURIComponent(JSON.stringify(body)));
-      const script = document.createElement('script');
-      script.src = API_URL + '?' + params.join('&');
-      script.onerror = () => {
-        if (finished) return; finished = true; clearTimeout(t); cleanup();
-        reject(new Error('Не удалось загрузить ответ'));
-      };
-      document.body.appendChild(script);
+
+      // Числовые поля — приводим строку '500000' к числу 500000
+      if (NUMERIC_FIELDS.indexOf(k) !== -1 && v !== null && v !== '') {
+        const n = Number(v);
+        v = isNaN(n) ? null : n;
+      }
+
+      // needs — массив в JSON-строку
+      if (k === 'needs' && Array.isArray(v)) v = JSON.stringify(v);
+
+      // Булевы → 0/1 (но только если не null)
+      if (BOOLEAN_FIELDS.indexOf(k) !== -1 && v !== null) v = v ? 1 : 0;
+
+      // Даты
+      if (DATETIME_FIELDS.indexOf(k) !== -1 && v) v = toMysqlDateTime(v);
+      if (DATE_FIELDS.indexOf(k) !== -1 && v) v = String(v).slice(0, 10);
+
+      out[k] = v;
     });
+    // Колонок activity_type/activity_summary в deals нет — отрезаем
+    delete out.activity_type;
+    delete out.activity_summary;
+    return out;
+  }
+
+  // Преобразуем 'YYYY-MM-DDTHH:MM' (datetime-local) или ISO в 'YYYY-MM-DD HH:MM:SS' для MariaDB
+  function toMysqlDateTime(s) {
+    if (!s) return null;
+    // Уже похоже на MySQL DATETIME — возвращаем как есть
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(s)) return s;
+    const t = String(s).replace('T', ' ');
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(t)) return t + ':00';
+    // На всякий случай — попробовать через Date
+    const d = new Date(s);
+    if (isNaN(d)) return null;
+    const pad = n => (n < 10 ? '0' : '') + n;
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+      + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+  }
+
+  // Главный адаптер: переводит «action» из старого кода в HTTP-запросы.
+  async function api(action, body) {
+    body = body || {};
+
+    if (action === 'ping') {
+      return rest('GET', '/status/ping');
+    }
+
+    if (action === 'bootstrap') {
+      // Параллельно: все сделки + все цитаты
+      // size=1000 — лимит per page в PHP-CRUD-API. Для пилота этого хватит.
+      const [dealsResp, quotesResp] = await Promise.all([
+        rest('GET', '/records/deals', null, { size: 1000, order: 'updated_at,desc' }),
+        rest('GET', '/records/pain_quotes', null, { size: 1000, order: 'created_at,desc' })
+      ]);
+      const dealsArr = (dealsResp && dealsResp.records) || [];
+      const quotesArr = (quotesResp && quotesResp.records) || [];
+      // Парсим needs из строки в массив
+      dealsArr.forEach(d => { d.needs = parseNeeds(d.needs); });
+      return { deals: dealsArr, quotes: quotesArr };
+    }
+
+    if (action === 'list') {
+      const resp = await rest('GET', '/records/deals', null, { size: 1000, order: 'updated_at,desc' });
+      const arr = (resp && resp.records) || [];
+      arr.forEach(d => { d.needs = parseNeeds(d.needs); });
+      return { deals: arr };
+    }
+
+    if (action === 'quotes') {
+      const resp = await rest('GET', '/records/pain_quotes', null, { size: 1000, order: 'created_at,desc' });
+      return { quotes: (resp && resp.records) || [] };
+    }
+
+    if (action === 'activity') {
+      // История по конкретной сделке
+      const resp = await rest('GET', '/records/activity', null, {
+        filter: 'deal_id,eq,' + body.deal_id,
+        order: 'created_at,desc',
+        size: 200
+      });
+      return { activity: (resp && resp.records) || [] };
+    }
+
+    if (action === 'save') {
+      // Бизнес-логика, которая раньше была на сервере:
+      //   1) Upsert deals (PATCH если есть запись, POST если новая)
+      //   2) Append activity (новая строка с историей касания)
+      //   3) Append pain_quote, если pain_quote непустая (>5 символов)
+      const now = new Date();
+      const nowMysql = toMysqlDateTime(now.toISOString());
+
+      // Готовим deal для записи
+      const deal = serializeDeal(body);
+      const isNew = !deal.id;
+      if (isNew) {
+        deal.id = makeId('d');
+        deal.created_at = nowMysql;
+      }
+      deal.updated_at = nowMysql;
+
+      // Проверка: существует ли запись (для решения POST vs PATCH)
+      let exists = false;
+      if (!isNew) {
+        try {
+          await rest('GET', '/records/deals/' + encodeURIComponent(deal.id));
+          exists = true;
+        } catch (e) {
+          // 404 — записи нет, создадим
+          exists = false;
+        }
+      }
+
+      if (exists) {
+        await rest('PATCH', '/records/deals/' + encodeURIComponent(deal.id), deal);
+      } else {
+        await rest('POST', '/records/deals', deal);
+      }
+
+      // Activity — отдельная запись на каждое касание
+      const activityId = makeId('a');
+      const activity = {
+        id: activityId,
+        deal_id: deal.id,
+        created_at: nowMysql,
+        seller: body.seller || '',
+        type: body.activity_type || 'call',
+        summary: body.activity_summary || '',
+        status_after: body.status || '',
+        temperature_after: body.temperature || '',
+        next_step: body.next_step || '',
+        next_date: body.next_date ? toMysqlDateTime(body.next_date) : null
+      };
+      await rest('POST', '/records/activity', activity);
+
+      // Pain quote — каждое касание может добавить новую цитату
+      const painText = String(body.pain_quote || '').trim();
+      if (painText.length > 5) {
+        const quote = {
+          id: makeId('q'),
+          deal_id: deal.id,
+          activity_id: activityId,
+          client_name: body.client_name || '',
+          venue_type: body.type || '',
+          current_system: body.current_system || '',
+          quote: painText,
+          created_at: nowMysql
+        };
+        await rest('POST', '/records/pain_quotes', quote);
+      }
+
+      // Возвращаем обновлённую сделку с распарсенным needs
+      const fresh = await rest('GET', '/records/deals/' + encodeURIComponent(deal.id));
+      fresh.needs = parseNeeds(fresh.needs);
+      return { deal: fresh, activity_id: activityId };
+    }
+
+    if (action === 'archive') {
+      // Soft delete: archived_at = now или null
+      const archive = body.archive !== false;
+      const patch = { archived_at: archive ? toMysqlDateTime(new Date().toISOString()) : null };
+      await rest('PATCH', '/records/deals/' + encodeURIComponent(body.id), patch);
+      const fresh = await rest('GET', '/records/deals/' + encodeURIComponent(body.id));
+      fresh.needs = parseNeeds(fresh.needs);
+      return { deal: fresh };
+    }
+
+    if (action === 'delete') {
+      // Жёсткое удаление сделки + связанная история + цитаты
+      // PHP-CRUD-API умеет DELETE по фильтру через ?filter=
+      // Чистим в порядке: activity → pain_quotes → deals
+      try {
+        await rest('DELETE', '/records/activity', null, { filter: 'deal_id,eq,' + body.id });
+      } catch (e) { /* возможно записей не было */ }
+      try {
+        await rest('DELETE', '/records/pain_quotes', null, { filter: 'deal_id,eq,' + body.id });
+      } catch (e) { /* возможно записей не было */ }
+      await rest('DELETE', '/records/deals/' + encodeURIComponent(body.id));
+      return { ok: true };
+    }
+
+    if (action === 'rejection_stats') {
+      // Считаем агрегаты на клиенте (раньше делал Apps Script)
+      // Берём все сделки и считаем.
+      const resp = await rest('GET', '/records/deals', null, {
+        filter: 'status,eq,Отказ',
+        size: 1000
+      });
+      const arr = (resp && resp.records) || [];
+
+      const byCategory = {};
+      const byReason = {};
+      const byCompetitor = {};
+      const reanimation = [];
+
+      arr.forEach(d => {
+        const cat = d.rejection_category || 'Не указано';
+        byCategory[cat] = (byCategory[cat] || 0) + 1;
+
+        const reason = d.rejection_reason || '';
+        if (reason) {
+          const key = cat + ' / ' + reason;
+          if (!byReason[key]) byReason[key] = { category: cat, reason: reason, count: 0, quotes: [] };
+          byReason[key].count++;
+          if (d.rejection_quote && byReason[key].quotes.length < 5) {
+            byReason[key].quotes.push(String(d.rejection_quote));
+          }
+        }
+
+        if (cat === 'Уже выбрали конкурента' && reason) {
+          byCompetitor[reason] = (byCompetitor[reason] || 0) + 1;
+        }
+
+        if (d.can_reanimate) {
+          reanimation.push({
+            id: d.id,
+            client_name: d.client_name,
+            type: d.type,
+            phone: d.phone,
+            rejection_category: cat,
+            rejection_reason: reason,
+            rejection_reason_other: d.rejection_reason_other,
+            rejection_quote: d.rejection_quote,
+            reanimate_after_date: d.reanimate_after_date
+          });
+        }
+      });
+
+      const byCategoryList = Object.keys(byCategory)
+        .map(k => ({ category: k, count: byCategory[k] }))
+        .sort((a, b) => b.count - a.count);
+      const byReasonList = Object.keys(byReason)
+        .map(k => byReason[k])
+        .sort((a, b) => b.count - a.count);
+      const byCompetitorList = Object.keys(byCompetitor)
+        .map(k => ({ competitor: k, count: byCompetitor[k] }))
+        .sort((a, b) => b.count - a.count);
+      reanimation.sort((a, b) => {
+        const ad = a.reanimate_after_date ? new Date(a.reanimate_after_date) : new Date(8.64e15);
+        const bd = b.reanimate_after_date ? new Date(b.reanimate_after_date) : new Date(8.64e15);
+        return ad - bd;
+      });
+
+      return {
+        by_category: byCategoryList,
+        by_reason: byReasonList,
+        by_competitor: byCompetitorList,
+        reanimation: reanimation
+      };
+    }
+
+    throw new Error('Неизвестное действие: ' + action);
   }
 
   function setSync(state, text) {

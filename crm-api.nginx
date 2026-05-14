@@ -1,0 +1,30 @@
+# FUSIONPOS CRM API — конфиг Nginx
+#
+# Путь на сервере: /etc/nginx/sites-available/crm-api
+#
+# Если PHP не 8.3 — поменяйте строку с fastcgi_pass на свою версию.
+# Проверить версию: ls /var/run/php/
+
+server {
+    listen 80;
+    server_name _;
+
+    root /var/www/crm-api;
+    index api.include.php;
+
+    # Все запросы передаются на api.include.php
+    location / {
+        try_files $uri $uri/ /api.include.php$is_args$args;
+    }
+
+    # Обработчик PHP
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/var/run/php/php8.3-fpm.sock;
+    }
+
+    # Закрываем доступ к скрытым файлам (.git, .env и т.п.)
+    location ~ /\. {
+        deny all;
+    }
+}
