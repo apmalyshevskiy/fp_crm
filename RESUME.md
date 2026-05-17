@@ -3,7 +3,7 @@
 Документ-снимок состояния пилота. Цель — чтобы при возврате к работе через
 неделю или месяц быстро вспомнить что и как устроено.
 
-Последнее обновление: 14 мая 2026.
+**Последнее обновление: 17 мая 2026.**
 
 ---
 
@@ -11,13 +11,15 @@
 
 У FUSIONPOS есть биллинг с элементами CRM. Этот пилот делается под **первого
 продавца** для:
-- сбора структурированных «итогов звонков» по чек-листу из «Скрипта первичного контакта v1» (п.11)
+- сбора структурированных «итогов звонков» по чек-листу из «Скрипта первичного контакта v1»
 - накопления «золота» — дословных цитат боли клиентов
-- визуализации воронки (канбан) и горящих follow-up
+- ведения лидов и воронки (канбан) с горящими follow-up
+- формирования коммерческих предложений (КП) с печатной формой
 - анализа причин отказов (что чинить в продукте)
 
 Принцип: каждый разговор продавца с клиентом = одна запись в `activity`,
-карточка клиента в `deals` обновляется.
+карточка клиента в `deals` обновляется. КП — отдельная сущность, привязана к
+сделке через `proposal.deal_id`.
 
 ---
 
@@ -25,18 +27,18 @@
 
 | Слой | Технология | Где живёт |
 |---|---|---|
-| Сервер | Ubuntu (Selectel VPS) | `139.100.204.216` |
+| Сервер | Ubuntu 24 (Selectel VPS) | `139.100.204.216` |
 | Веб-сервер | Nginx | `/etc/nginx/sites-available/crm-api` |
 | Backend-язык | PHP 8.3 (php-fpm) | `/var/www/crm-api/` |
-| API-движок | [PHP-CRUD-API v2](https://github.com/mevdschee/php-crud-api) (mevdschee/main) | `/var/www/crm-api/api.php` (~12000 строк, single-file) |
+| API-движок | PHP-CRUD-API v2 (mevdschee/main) | `/var/www/crm-api/api.php` (~12000 строк, single-file) |
 | БД | MariaDB | localhost:3306, БД `fusionpos_crm` |
-| Frontend | Один HTML-файл (~2400 строк, vanilla JS, без сборки) | `/var/www/crm-api/crm_api.html` |
+| Frontend | Один HTML-файл (~4100 строк, vanilla JS, без сборки) | `/var/www/crm-api/fp_crm.html` |
 | Авторизация | Basic Auth (Nginx) + X-API-Key + таблица users в БД | system |
 | Защита | ufw + fail2ban | system |
 
-Доступ к CRM: `http://139.100.204.216/crm_api.html`
-Доступ к API: `http://139.100.204.216/records/...` (с заголовком `X-API-Key`)
-Эндпоинт текущего юзера: `http://139.100.204.216/whoami`
+**Доступ к CRM:** `http://139.100.204.216/fp_crm.html`
+**Доступ к API:** `http://139.100.204.216/records/...` (заголовок `X-API-Key`)
+**Эндпоинт текущего юзера:** `http://139.100.204.216/whoami`
 
 ---
 
@@ -48,353 +50,493 @@
   │                         ⚠ Хвост файла (блок «// file: src/index.php» в конце)
   │                         был УДАЛЁН. Он автоматически выполнялся при require_once
   │                         и генерировал двойной ответ от API.
-  ├── api.include.php     — entry point для PHP-CRUD-API. Подключает api.php,
-  │                         читает config.php, инициализирует API.
-  ├── whoami.php          — мини-эндпоинт. Возвращает {login: "..."} из Basic Auth.
-  │                         Тоже читает config.php.
-  ├── config.php          — единый источник секретов (api_token, креды БД).
-  │                         chmod 640, owner=root, group=www-data.
-  └── crm_api.html        — фронтенд. В строках 912-913 подставлены API_URL='' и API_TOKEN.
+  ├── api.include.php     — entry point. Подключает api.php, читает config.php
+  ├── whoami.php          — мини-эндпоинт. Возвращает {login: "..."} из Basic Auth
+  ├── config.php          — единый источник секретов (api_token, креды БД)
+  │                         chmod 640, owner=root, group=www-data
+  └── fp_crm.html         — фронтенд. API_URL='' и API_TOKEN подставлены прямо в код
 
 /etc/nginx/
-  ├── sites-available/crm-api  — конфиг Nginx (Basic Auth + статика + PHP-эндпоинты)
-  ├── sites-enabled/crm-api    — симлинк на sites-available
-  └── .htpasswd                — пользователи Basic Auth (хеши паролей)
+  ├── sites-available/crm-api  — конфиг (Basic Auth + статика + PHP-эндпоинты)
+  ├── sites-enabled/crm-api    — симлинк
+  └── .htpasswd                — пользователи Basic Auth
 ```
 
 ### Особенности Nginx-конфига
 
-- `auth_basic` на уровне server — Basic Auth работает на ВСЁ (фронт + API + whoami)
+- `auth_basic` на уровне server — Basic Auth работает на ВСЁ
 - `location = /api.php { deny all; }` — закрыли библиотеку от прямого доступа
-- `location = /api.include.php { ... }` и `location = /whoami.php { ... }` — два разрешённых PHP-эндпоинта
+- `location = /api.include.php` и `location = /whoami.php` — два разрешённых PHP-эндпоинта
 - `location = /whoami { rewrite ^ /whoami.php last; }` — красивый URL без `.php`
 - Все остальные `.php` запрещены через `location ~ \.php$ { deny all; }`
-- Статика отдаётся через `try_files $uri @api;` — если файл есть на диске, отдаётся он, иначе уходит в `api.include.php`
+- `try_files $uri @api;` — если файл на диске есть, отдаём его, иначе уходит в `api.include.php`
 
 ---
 
 ## 4. База данных
 
-**База:** `fusionpos_crm` (utf8mb4 для русского текста и эмодзи)
+**База:** `fusionpos_crm` (utf8mb4)
 
 **Пользователи MariaDB:**
-- `crm_api@'localhost'` — используется API, имеет права только на `fusionpos_crm.*`
-- `root@'localhost'` — для админских операций
-- `php-crud-api@'localhost'` — был создан в процессе отладки, не используется. Можно удалить:
-  ```sql
-  DROP USER 'php-crud-api'@'localhost';
-  ```
+- `crm_api@'localhost'` — используется API, права только на `fusionpos_crm.*`
+- `root@'localhost'` — админ
+- `php-crud-api@'localhost'` — legacy, не используется (`DROP USER` можно)
+
+### Все таблицы используют INT AUTO_INCREMENT + FK с ON DELETE CASCADE/SET NULL
+
+Миграция со строковых id (`d_xxx_yyy`) на числовые INT завершена. Связи проверяются на уровне БД, при удалении сделки — каскадно удаляются касания, цитаты и КП.
 
 ### Таблицы
 
-**`users`** — пользователи системы. Связан с Basic Auth логином по полю `login`.
-- `id` (INT PK AUTO_INCREMENT) — используется как `seller_id` в deals/activity
-- `login` (VARCHAR UNIQUE) — должен совпадать с логином в `/etc/nginx/.htpasswd`
-- `full_name` (VARCHAR) — отображается в шапке и в сделках
-- `email`, `phone` (NULL) — на будущее
-- `role` (`seller` / `admin`)
-- `is_active` (TINYINT)
-- `created_at`
+**`users`** — пользователи системы
+- `id` INT PK — используется как `seller_id` в deals/activity
+- `login` UNIQUE — должен совпадать с логином в `/etc/nginx/.htpasswd`
+- `full_name`, `email`, `phone` — для печатной формы КП
+- `role` (`seller`/`admin`), `is_active`, `created_at`
 
-Сейчас в users: 1 запись — `login='crm', full_name='Малышевский Алексей', role='admin'`.
+Сейчас: 1 запись — `login='crm', full_name='Малышевский Алексей', role='admin'`.
 
-**`deals`** — карточки клиентов, по одной строке на клиента.
-Колонки сгруппированы по смыслу:
-- Идентификация: `id` (VARCHAR, формата `d_xxx_yyy`), `created_at`, `updated_at`
-- Продавец: `seller_id` (INT NULL, FK→users.id ON DELETE SET NULL), `seller` (VARCHAR, legacy)
-- Клиент: `client_name`, `phone`, `type`, `points`, `stage`, `open_date`, `current_system`
-- Боль и потребности: `pain_quote`, `needs` (JSON-строка в TEXT), `needs_text`
-- Квалификация: `temperature` (hot/warm/cold), `dm`, `dm_is_speaker`, `revenue`, `plan`, `hardware`
-- Воронка: `status`, `next_step`, `next_date`
-- Биллинг FUSIONPOS: `fp_client_id`, `fp_domain`, `fp_version`
-- Отказы: `rejection_category`, `rejection_reason`, `rejection_reason_other`, `rejection_quote`, `can_reanimate`, `reanimate_after_date`
-- Архив: `archived_at` (soft delete)
+**`deals`** — сделки и лиды (единая таблица, разделение по `status`)
+- `id`, `created_at`, `updated_at`, `seller_id` (FK→users)
+- `source` — источник лида (7 вариантов)
+- `client_name`, `phone`, `email` — контакты текущего контактного лица
+- `contact_name`, `contact_role`, `contact_is_dm` — кто этот человек
+- `type`, `points`, `stage`, `open_date` — про заведение
+- `current_system`, `pain_quote`, `needs` (JSON), `needs_text`
+- `temperature`, `revenue`, `plan`, `hardware`, `comment`
+- `status` (`Лид` / `Первичный контакт` / ... / `Отказ` / `Не сейчас`)
+- `next_step`, `next_date` — follow-up
+- `fp_client_id`, `fp_domain`, `fp_version` — привязка к биллингу
+- `rejection_*`, `can_reanimate`, `reanimate_after_date`
+- `archived_at` (soft delete)
 
-**`activity`** — лента касаний, N строк на одну сделку:
-- `id`, `deal_id`, `created_at`, `seller_id` (FK→users.id), `seller` (legacy)
+**`activity`** — история касаний. Одна запись = один звонок/встреча/демо/КП/заметка
+- `id`, `deal_id` (FK CASCADE), `created_at`, `seller_id`
 - `type` (call/meeting/demo/proposal/invoice/note)
-- `summary`, `status_after`, `temperature_after`, `next_step`, `next_date`
+- `summary`, `status_after`, `temperature_after`
+- `next_step`, `next_date`
 
-**`pain_quotes`** — накопительная история цитат боли:
-- `id`, `deal_id`, `activity_id`
-- `client_name`, `venue_type`, `current_system`
-- `quote`, `created_at`
+**`pain_quotes`** — цитаты боли (золото)
+- `id`, `deal_id` (FK CASCADE), `activity_id` (FK SET NULL)
+- `client_name`, `venue_type`, `current_system`, `quote`, `created_at`
 
-⚠ Колонка `seller` (текстовая) в deals и activity осталась для backcompat, но **новые
-записи в неё не пишут** — только `seller_id`. Можно дропнуть после убеждения,
-что нигде не используется.
+**`catalog_items`** — каталог товаров и услуг для КП. Самоссылка через `parent_id`
+- `id`, `parent_id` (NULL = категория верхнего уровня)
+- `name`, `unit`, `price`, `vat_rate` ('no_vat' / '5')
+- `position`, `is_active`, `created_at`
 
----
+Содержимое:
+- **Лицензии** → Лицензия FUSIONPOS (реестр №31687), 3000 ₽/мес, без НДС
+- **Услуги** → Настройка кассы 15000, Обучение 3000/час, Подключение эквайера 5000 (все НДС 5%)
+- **Оборудование** → Старт 70000, Профи 150000 (оба без НДС)
 
-## 5. Авторизация и безопасность
+**`proposals`** — КП. `id` = номер КП
+- `id`, `deal_id` (FK CASCADE), `date`, `valid_until`, `comment`
+- `status` (draft / sent / cancelled)
+- `total_amount`, `total_vat`, `total_no_vat` (денормализовано)
+- `seller_id`, `parent_id` (для копий), `created_at`, `updated_at`
 
-### Текущая модель
-
-**Два слоя авторизации:**
-
-1. **Basic Auth на уровне Nginx** — браузер просит логин/пароль при первом заходе
-   на сайт. Запоминается на сессию. Хеши паролей в `/etc/nginx/.htpasswd`.
-2. **X-API-Key** — захардкоженный токен в `config.php` (бэк) и в `crm_api.html` (фронт).
-   Каждый запрос к API требует его.
-
-**Связь с пользователями:**
-- При загрузке страницы фронт идёт в `/whoami` → получает login из Basic Auth
-- Затем идёт в `/records/users` → строит словарь userById
-- Находит себя по login → подставляет имя в шапке
-- При сохранении сделок/касаний пишет `seller_id = currentUser.id`
-
-### Что защищено
-
-- ✅ MariaDB слушает только localhost
-- ✅ Пользователь `crm_api` имеет права только на свою БД
-- ✅ Basic Auth перед любым запросом к сайту/API
-- ✅ X-API-Key обязателен в каждом API-запросе
-- ✅ ufw открыт только на 22, 80, 443
-- ✅ fail2ban защищает SSH от перебора
-- ✅ debug-режим PHP-CRUD-API ОТКЛЮЧЁН
-- ✅ `config.php` имеет права 640 root:www-data
-- ✅ Удалённый доступ к БД — через SSH-туннель
-
-### Что НЕ защищено
-
-- ⚠ HTTP без HTTPS — Basic Auth и токен передаются в открытом виде. Обязательно
-  прикрутить Let's Encrypt перед публичной работой
-- ⚠ `cors.allowedOrigins = '*'` — после HTTPS сузить до конкретного origin
-- ⚠ Нет автоматического бэкапа БД — настроить mysqldump по cron
-
-### Доступы (записать в безопасное место — не в git!)
-
-- Root MariaDB: свой
-- Пользователь crm_api в БД: свой
-- X-API-Key: текущий в `config.php`
-- Basic Auth: логин `crm` + свой пароль
-- Root SSH: свой
+**`proposal_items`** — позиции КП
+- `id`, `proposal_id` (FK CASCADE), `position`, `catalog_item_id` (FK SET NULL)
+- `name`, `unit`, `quantity`, `price`, `vat_rate`
+- `amount`, `vat_amount` (с округлением)
 
 ---
 
-## 6. Фронтенд crm_api.html — как устроен
+## 5. Авторизация
 
-Один HTML-файл, ~2400 строк, без сборки. Внутри:
+### Двойная защита: Basic Auth + X-API-Key
 
-### Главные разделы (вкладки)
+1. **Basic Auth (Nginx)** — пускает на сайт вообще. Логин/пароль из `.htpasswd`
+2. **X-API-Key (PHP-CRUD-API)** — нужен заголовок при обращении к API
 
-- **Дашборд** — статистика (всего, горячие, тёплые, просрочены) + ближайшие 5 follow-up
-- **Канбан** — 6 колонок воронки + 2 сворачиваемых блока справа (Отказ, Не сейчас). Drag&drop НЕТ — клик по карточке открывает детали
-- **Сделки** — список с фильтрами, поиском, сортировкой, переключателем «Активные / Архив»
-- **Цитаты боли** — отдельный фид pain_quotes
-- **Отказы** — аналитика: реанимация, по категориям, конкуренты, по конкретным причинам
+Фронт делает Basic Auth прозрачно через браузер. X-API-Key добавляется в каждый запрос JS-кодом.
 
-### Модалка карточки сделки (двухрежимная)
+### Поток определения пользователя
 
-- **view** — детали + кнопки «+ Новое касание», «Редактировать», «В архив» + история касаний
-- **edit** — форма по чек-листу п.11. При сохранении: PUT deals, POST activity, опционально POST pain_quotes
+1. `loadCurrentUser()` → `GET /whoami`
+2. `whoami.php` смотрит `$_SERVER['PHP_AUTH_USER']` (от Nginx) → возвращает `{login: "crm"}`
+3. Фронт ищет в `usersById` юзера с таким login → это `currentUser`
+4. В шапке отображается `currentUser.full_name`
+5. При сохранении — используется `currentUser.id` как `seller_id`
 
-### Блок отказа
-
-Показывается ТОЛЬКО при статусе «Отказ». Категория → подпричина (динамически по
-категории) → цитата → чекбокс реанимации → дата возврата.
-
-### Текущий юзер
-
-Шапка отображает `Вы: Малышевский Алексей` — берётся из таблицы users по
-Basic Auth логину. Если логин в Basic Auth есть, но в users нет — красная надпись
-«(не в users)» как сигнал админу.
+Если Basic Auth login есть, но в `users` его нет — `currentUser.id = null` и работа с предупреждением (имя красным).
 
 ---
 
-## 7. Известные баги и обходы
+## 6. Frontend — fp_crm.html (4113 строк)
 
-### Баг 1: PATCH в PHP-CRUD-API падает с `Invalid parameter number`
+Vanilla JS, без сборки. Один файл.
 
-**Симптом**: `PATCH /records/deals/{id}` возвращает 500 с `SQLSTATE[HY093]`.
-Баг в самой библиотеке (v2 main branch), не починен. Гипотезы про middleware
-не подтвердились.
+### Вкладки
+- **Дашборд** — счётчики (Лиды / Сделки / Горячие / Тёплые / Срочно) + ближайшие 5 follow-up
+- **Лиды** — список лидов с фильтрами (Без касаний / >3 дней) и сортировкой
+- **Канбан** — 6 колонок воронки + блоки «Отказ»/«Не сейчас». Лидов нет
+- **Сделки** — список всех сделок (без лидов) с поиском, фильтрами, архивом
+- **Цитаты боли** — собранные цитаты с метаданными
+- **Отказы** — статистика по категориям и причинам
 
-**Обход**: используем **PUT** вместо PATCH. PUT — полная замена, требует
-прислать все поля. Фронт сначала делает GET текущей записи, мёрджит изменения,
-отправляет PUT. Это +1 GET-запрос, но работает надёжно.
+### Шапка
+- Имя текущего продавца (из `/whoami`)
+- Кнопки «+ Новый лид» (secondary) и «+ Новая сделка» (primary)
 
-Где в коде crm_api.html: функция `api()`, кейсы `save` и `archive`.
+### Карточка сделки (модалка)
+- View-режим: все поля, кнопки действий, блок КП, история касаний
+- Edit-режим: форма редактирования
+- Для лидов — кнопка «🤝 Принять в работу» (перевод в «Первичный контакт»)
+- Блок «Коммерческие предложения» с кнопкой «+ Новое КП»
 
-### Баг 2: Двойной JSON-ответ (исправлен)
+### Форма редактирования сделки — порядок полей
+1. Клиент / Телефон
+2. Email / Контактное лицо
+3. Должность / [✓] Этот контакт — ЛПР
+4. Формат заведения / Кол-во точек
+5. Стадия / Дата открытия
+6. Источник
+7. Что используют сейчас, Цитата боли, Потребности, доп.текст
+8. Температура
+9. Оборот / Тариф
+10. Оборудование
+11. Комментарий
+12. Статус (включая «Лид» первым)
+13. FP Client ID, FP Domain, Версия FP
+14. Блок отказа (при status=Отказ)
+15. Следующий шаг + дата
+16. Резюме звонка
 
-**Был симптом**: запросы возвращали два склеенных JSON, первый —
-`{"code":9999,"message":"PDOException occurred"}` от попытки PHP-CRUD-API
-подключиться как пользователь `php-crud-api`, второй — нормальные данные.
+### Модалка «+ Новый лид» (упрощённая)
+- Источник * (обязательно)
+- Название / Телефон / Email / Контактное лицо / Тип / Заметка
+- Сохраняет deals.status='Лид', заметка → activity типа 'note'
 
-**Причина**: в конце `api.php` (с гитхаба) есть блок `// file: src/index.php`,
-который автоматически выполняется при `require_once`. Он создавал свой `Api`
-со своим конфигом (с захардкоженным юзером `php-crud-api`).
+### Модалка КП
+- Шапка: дата, действительно до, комментарий
+- Таблица позиций с datalist-автодополнением (формат «Категория — Наименование»)
+- Расчёты НДС «изнутри» (vat = amount × 5/105) в реальном времени
+- Итоги: Без НДС / В т.ч. НДС / Всего
+- Кнопки: «Сохранить как черновик» / «Сохранить и отправить»
+- Редактирование: PUT proposals + DELETE+POST позиций
 
-**Решение**: удалили хвост `api.php` начиная со строки `// file: src/index.php`.
-Также в crm_api.html есть `parseConcatenatedJson` который берёт последний
-валидный JSON-объект — страховка на будущее.
+### Печатная форма КП
+- Открывается в новом окне через `window.open`
+- Чистый HTML, изолировано от CRM
+- `@media print` — A4, 18mm/16mm
+- Шапка: FUSIONPOS + продавец из users
+- Печать через стандартный Ctrl+P → Save as PDF
 
-### Баг 3: Пустые строки в числовых полях (исправлен)
+### UX-доработки (внесены 17 мая)
 
-**Был симптом**: MariaDB ругалась `Incorrect integer value: '' for column 'points'`.
-
-**Причина**: HTML `input type="number"` отдаёт пустую строку `''` если поле
-не заполнено. MariaDB в strict mode такое не принимает.
-
-**Решение**: в функции `serializeDeal` фронта пустые строки для числовых/
-булевых/датных полей конвертируются в `null`.
-
----
-
-## 8. Что входит в «save» — порядок шагов
-
-Клик «Сохранить» в форме итога звонка → 3-4 HTTP-запроса:
-
-1. Если сделка существующая → `GET /records/deals/{id}` (взять текущее состояние для мёрджа)
-2. `PUT /records/deals/{id}` (с полным мёрджем) ИЛИ `POST /records/deals` (если новая)
-3. `POST /records/activity` (новая запись в истории касаний, с `seller_id`)
-4. Если `pain_quote` непустой → `POST /records/pain_quotes`
-5. `GET /records/deals/{id}` (получить свежую версию для отображения в карточке)
-
-Скорость: ~300-800 мс на полное сохранение.
-
----
-
-## 9. Регулярная работа с CRM
-
-- **Доступ продавцу**: ссылка `http://139.100.204.216/crm_api.html` + Basic Auth логин/пароль
-- **Регистрация нового продавца**: 
-  1. `htpasswd /etc/nginx/.htpasswd <login>` — добавить в Basic Auth
-  2. `INSERT INTO users (login, full_name, role) VALUES ('<login>', 'Имя Фамилия', 'seller');` — добавить в БД
-- **Прямой доступ к БД**: HeidiSQL/DBeaver через SSH-туннель (`127.0.0.1:3306`, через SSH к 139.100.204.216:22) — для ad-hoc запросов и экспорта
-
----
-
-## 10. Что было решено и отложено
-
-### Сделано
-- ✅ Прототип на Google Sheets / Apps Script (отказались, медленно)
-- ✅ Развёрнут Ubuntu сервер на Selectel
-- ✅ Установлены Nginx + PHP 8.3 + MariaDB
-- ✅ Развёрнут PHP-CRUD-API с авторизацией X-API-Key
-- ✅ Создана БД, схема, индексы
-- ✅ Фронт переписан с JSONP/Apps Script на REST/PHP-CRUD-API
-- ✅ Захостили фронт на том же сервере (избавились от mixed content)
-- ✅ Починили все баги (двойной JSON, datetime, PATCH→PUT)
-- ✅ Basic Auth добавлен
-- ✅ Таблица users + FK + связь с deals/activity через `seller_id`
-- ✅ `/whoami` эндпоинт + автоподстановка имени в шапке
-- ✅ Единый `config.php` для секретов (бэк)
-
-### Обсуждалось, отложено
-
-**Счета на оплату из CRM** — концепт обсуждали, реализацию отложили:
-
-Контекст:
-- Два юрлица параллельно (лицензии — НДС 5%, оборудование — НДС 20%)
-- Биллинг и 1С работают вручную, API нет
-- Решено: пилоту дать пройти 2-3 месяца с продавцом, потом понять реальные
-  потребности (сколько счетов в неделю, какие позиции, как бухгалтер ведёт
-  нумерацию) и тогда вернуться к реализации.
-
-Если решим делать — концептуально планировалось:
-- Таблица `companies` (наши два ООО с реквизитами банка)
-- Таблица `invoices` (несколько на сделку, свои номера с возможностью править)
-- Реквизиты клиента — возможно через OData с 1С
-- PDF — через HTML+браузерная печать (не через PHP-библиотеку)
-- Каталог тарифов захардкожен в HTML, можно добавлять произвольные позиции
+- **Телефон**: CSS-селектор включает `tel`/`email`. `type="tel"`, `inputmode="tel"`, `autocomplete="tel"`, placeholder `+7 (999) 123-45-67`. Автоформат: ведущая `8` → `+7`
+- **Email**: мягкая валидация — подсветка красным при blur, снимается при коррекции, блокирует сохранение с toast'ом. Пустой email допустим
+- **Касание при сохранении**:
+  - Резюме заполнено → касание создаётся
+  - Резюме пустое → диалог «Добавить касание / Сохранить без касания»
+  - При «Добавить» — отдельный диалог запрашивает текст + тип
+  - Сервер получает флаг `skip_activity`, блок activity обёрнут в условие
+- **Кастомная `showDialog()`** заменила `confirm`/`prompt`. Возвращает Promise, поддерживает Esc/Enter
+- **Select типа касания** в диалоге: Звонок / Встреча / Демо / Отправка КП / Выставлен счёт / Заметка
 
 ---
 
-## 11. TODO / Roadmap
+## 7. Ключевые JS-функции
 
-### Срочное (при возврате)
+Глобальные:
+- `currentUser`, `usersById`, `catalog` (byId/categories/loaded), `deals`, `quotes`
+- `LEAD_STATUS = 'Лид'`, `FUNNEL_STATUSES`, `SIDE_STATUSES`
+- `isLead(d)`, `isArchived(d)`, `activeDeals()`, `activeLeads()`
+
+Рендеры:
+- `render()` — главный диспетчер
+- `renderDashboard`, `renderKanban`, `renderDeals`, `renderLeads`, `renderQuotes`
+- `renderModalView`, `setModalMode('view'|'edit')`
+
+Сохранение:
+- Главная save-логика в `api()` под `save`
+- `acceptLead(dealId)` — перевод лида в «Первичный контакт»
+- `saveNewLead()` — POST лида + опциональная заметка
+
+КП:
+- `openProposalForm`, `openEditProposal`
+- `calcRow`, `calcTotals`, `round2`, `fmtMoney`
+- `updateRowCalcs`, `updateTotals` (обновление UI без потери фокуса)
+- `saveProposal(statusValue)` — POST/PUT в proposals + позиции
+- `postProposalActivity`, `maybeAdvanceDealStatus`
+- `printProposal`, `buildProposalPrintHtml`
+- `rebuildCatalogDatalist`
+
+Утилиты:
+- `parseConcatenatedJson` в `rest()` — страховка от двойного JSON
+- `showDialog` — кастомная модалка
+- `formatPhone` — автоформатёр телефона
+
+---
+
+## 8. Известные баги и обходы
+
+### PHP-CRUD-API PATCH не работает
+- Симптом: `SQLSTATE[HY093] Invalid parameter number`
+- **Обход:** PUT с GET+merge. Шаблон:
+  ```js
+  const existing = await rest('GET', '/records/deals/' + id);
+  const merged = Object.assign({}, existing, changes);
+  delete merged.id;
+  await rest('PUT', '/records/deals/' + id, merged);
+  ```
+
+### Двойной JSON-ответ от API (исправлен)
+- Хвост `api.php` со строкой `// file: src/index.php` автоматически выполнялся
+- Удалили хвост. `parseConcatenatedJson` в `rest()` остался страховкой
+
+### Пустые строки в numeric/boolean/date полях (исправлен)
+- `serializeDeal` конвертирует `''` → `null` для:
+  - NUMERIC: points, revenue, seller_id
+  - BOOLEAN: contact_is_dm, can_reanimate
+  - DATE/DATETIME поля
+
+### Поиск сделки по id
+- id числовой, dataset.id строка → `Number(x.id) === Number(id)` везде
+
+### Флаг skip_activity не должен попасть в deals
+- Фронт передаёт `skip_activity: true` если касание не нужно
+- Сервер вычищает флаг перед записью в БД, использует как условие
+
+---
+
+## 9. Секреты
+
+В `config.php` (chmod 640, root:www-data):
+- `api_token`: `fpos_x7Kj9mNqR3vL2pWdF8sH-GIx9CIHFXjnw`
+- DB user: `crm_api`, пароль — у пользователя
+
+В `.htpasswd`:
+- Логин: `crm`, пароль — у пользователя
+
+Пароль `root` MariaDB и `root` SSH — у пользователя.
+
+---
+
+## 10. Что сделано в текущем спринте
+
+### Этап — Коммерческие предложения (КП)
+1. ✅ Концепт в `PROPOSAL_CONCEPT.md`
+2. ✅ Каталог товаров и услуг (`catalog_items` с самоссылкой)
+3. ✅ Блок «КП» в карточке сделки
+4. ✅ Форма создания с datalist-автодополнением
+5. ✅ Расчёты НДС «изнутри» (две ставки: no_vat и 5%)
+6. ✅ Сохранение (POST/PUT)
+7. ✅ Авто-перевод статуса сделки в «КП отправлено»
+8. ✅ Запись в activity при отправке
+9. ✅ Печатная форма (HTML → Ctrl+P → PDF)
+10. ✅ Мягкое редактирование (draft без вопросов, sent через confirm)
+
+### Этап — Миграция id на INT
+1. ✅ Все таблицы на INT AUTO_INCREMENT
+2. ✅ FK с ON DELETE CASCADE/SET NULL
+3. ✅ Фронт переделан под INT id (Number() везде)
+
+### Этап — Контакты и Email
+1. ✅ Контактное лицо (имя, должность, ЛПР-чекбокс)
+2. ✅ Email клиента
+3. ✅ Поиск по контакту, email, комментарию
+
+### Этап — Лиды
+1. ✅ Статус «Лид» — нулевой этап
+2. ✅ Отдельный таб «Лиды» с фильтрами
+3. ✅ Упрощённая модалка «+ Новый лид»
+4. ✅ Кнопка «🤝 Принять в работу»
+5. ✅ 7 источников лидов
+
+### Этап — UX-полировка (17 мая)
+1. ✅ Поля телефона: формат, валидация, автозамена 8→+7
+2. ✅ Мягкая валидация email на blur
+3. ✅ Логика «касание только если есть резюме»
+4. ✅ Кастомная `showDialog()`
+5. ✅ Select типа касания в диалоге
+
+---
+
+## 11. Обсуждалось, но отложено
+
+### Отправка КП по email (Яндекс)
+- PHPMailer для SMTP `smtp.yandex.ru:465` + IMAP-копия в Sent
+- HTML в теле письма (без PDF-вложения)
+- Открытые вопросы: единый ящик или личные, нужно ли PDF, пароль приложения Яндекса
+- Что сделать: колонки `sent_to_email`/`sent_at`, эндпоинт `send_proposal.php`, кнопка «📧 Отправить по email»
+- Оценка: 1 рабочий день (единый ящик) / 2 дня (личные)
+
+### Счета на оплату
+- Дать пилоту пройти 2-3 месяца, потом понять реальные потребности
+- Концептуально: `companies` (наши два ООО) + `invoices` (несколько на сделку)
+
+### Импорт лидов из CSV
+- Полезная фича когда продавец получит список 50 контактов с выставки или 2GIS
+- Отложили до момента когда такой кейс реально появится
+
+---
+
+## 12. TODO / Roadmap
+
+### Срочное при возврате
 - [ ] HTTPS через Let's Encrypt (нужен домен)
-- [ ] Сузить CORS с `*` до конкретного origin после HTTPS
-- [ ] Бэкап БД по cron (`mysqldump`)
-- [ ] Удалить колонку `seller` (legacy) из `deals` и `activity` после убеждения что нигде не используется
-- [ ] Удалить пользователя БД `php-crud-api` (`DROP USER`)
-
-### Среднесрочное
-- [ ] Кнопка «Выйти» (сейчас Basic Auth, выйти можно только закрыв все окна браузера или приватный режим)
-- [ ] Фильтры по продавцу в Сделках/Канбане (когда станет 2+ юзеров)
-- [ ] Кэширование users во фронте (сейчас грузится при каждой загрузке страницы — нормально, но можно ускорить)
-
-### По продуктовой логике (придёт от продавца в живой работе)
-- [ ] Импорт лидов (CSV / из формы на сайте)
-- [ ] Уведомления о просроченных follow-up (email или Telegram-бот)
-- [ ] Счета на оплату (см. раздел 10)
-- [ ] Аналитика конверсии по типам заведений / источникам
+- [ ] Сузить CORS с `*` до конкретного origin
+- [x] **Бэкап БД и конфигов на Selectel S3** — настроен 17 мая (см. раздел 17 ниже)
+- [ ] Заполнить контакты в users (email, phone) — для печатной формы КП:
+  ```sql
+  UPDATE users SET email = '...', phone = '+7 ...' WHERE login = 'crm';
+  ```
+- [ ] Удалить пользователя БД `php-crud-api` (legacy)
+- [ ] Удалить старую колонку `seller` (legacy текстовый) если нигде не используется
 
 ### Долгосрочное / архитектурное
-- [ ] Если продавцов станет 3+ — возможно переход на полноценную JWT-авторизацию
-- [ ] Перенос на тот же сервер, где биллинг — для упрощения интеграции по OData
-- [ ] Возможно, исправить PATCH в PHP-CRUD-API форком или альтернативной библиотекой
-- [ ] **Рефакторинг fp_crm.html (~3500 строк)** — разнести JS на ES-модули
-  (config.js / api.js / users.js / catalog.js / deals.js / activity.js / proposals.js / ui-render.js / modal.js).
-  Сейчас всё в одном файле — для пилота терпимо, но при росте до 5-6 тысяч строк ориентироваться станет сложно.
-  Триггер для запуска рефакторинга — момент когда добавление новой фичи начинает занимать дольше из-за поиска в файле.
-  Делать без сборщика (Vite/esbuild) — `<script type="module">` и import'ы. 2-3 часа работы.
+- [ ] При продавцах 3+ → JWT-авторизация вместо Basic Auth
+- [ ] **Рефакторинг fp_crm.html (~4100 строк)** — разнести JS на ES-модули:
+  config / api / users / catalog / deals / activity / proposals / ui-render / modal.
+  Триггер: когда добавление новой фичи замедлится из-за поиска в файле.
+  Без сборщика — `<script type="module">` и import'ы. 2-3 часа работы
+- [ ] Множественные контакты на клиента (отдельная таблица `contacts`) — при сетевом клиенте с несколькими ЛПР
 
 ---
 
-## 12. Полезные команды на сервере
+## 13. Полезные команды на сервере
 
 ```bash
 # Проверить, что API живой
-curl -s -u crm:ПАРОЛЬ -H "X-API-Key: ТОКЕН_ИЗ_config.php" http://localhost/status/ping
+curl -s -u crm:ПАРОЛЬ -H "X-API-Key: ТОКЕН" http://localhost/status/ping
 
 # Проверить whoami
-curl -s -u crm:ПАРОЛЬ -H "X-API-Key: ТОКЕН_ИЗ_config.php" http://localhost/whoami
+curl -s -u crm:ПАРОЛЬ -H "X-API-Key: ТОКЕН" http://localhost/whoami
 
-# Логи Nginx
+# Логи
 tail -f /var/log/nginx/error.log
 tail -f /var/log/nginx/access.log
-
-# Логи PHP
 tail -f /var/log/php8.3-fpm.log
 
 # Перезапустить Nginx после правки конфига
 nginx -t && systemctl reload nginx
 
-# Подключиться к БД из консоли
+# Подключиться к БД
 mariadb -u root -p fusionpos_crm
 
-# Список сделок прямо из SQL
+# Список сделок
 mariadb -u root -p fusionpos_crm -e "SELECT id, client_name, status, seller_id, created_at FROM deals WHERE archived_at IS NULL ORDER BY created_at DESC LIMIT 10;"
 
-# Сколько сделок по статусам
-mariadb -u root -p fusionpos_crm -e "SELECT status, COUNT(*) FROM deals WHERE archived_at IS NULL GROUP BY status;"
+# Список лидов
+mariadb -u root -p fusionpos_crm -e "SELECT id, client_name, source, created_at FROM deals WHERE status = 'Лид' AND archived_at IS NULL ORDER BY created_at DESC;"
 
-# Сделки с именем продавца через JOIN
-mariadb -u root -p fusionpos_crm -e "SELECT d.id, d.client_name, d.status, u.full_name FROM deals d LEFT JOIN users u ON d.seller_id = u.id WHERE d.archived_at IS NULL LIMIT 10;"
-
-# Бэкап БД одной командой
-mysqldump -u root -p fusionpos_crm > /root/backup_$(date +%F).sql
-
-# Узнать заблокированные fail2ban IP
-fail2ban-client status sshd
-
-# Добавить нового продавца (Basic Auth + БД)
-htpasswd /etc/nginx/.htpasswd <login>
-mariadb -u root -p fusionpos_crm -e "INSERT INTO users (login, full_name, role) VALUES ('<login>', 'Имя Фамилия', 'seller');"
+# Список КП
+mariadb -u root -p fusionpos_crm -e "SELECT id, deal_id, status, total_amount, created_at FROM proposals ORDER BY created_at DESC LIMIT 10;"
 ```
 
 ---
 
-## 13. Краткий путь восстановления при катастрофе
+## 14. Документы рядом
 
-Если сервер умер и нужно поднять CRM с нуля:
+В `/mnt/user-data/outputs/`:
+- `fp_crm.html` — финальная версия фронта (4113 строк)
+- `RESUME.md` — этот документ
+- `PROPOSAL_CONCEPT.md` — концепт КП (реализован)
+- `api.include.php`, `whoami.php`, `config.php`, `crm-api.nginx` — серверная часть
 
-1. Новый Ubuntu сервер
-2. `apt install nginx mariadb-server php-fpm php-mysql apache2-utils`
-3. Создать БД `fusionpos_crm` и пользователя `crm_api`
-4. Восстановить из бэкапа: `mariadb -u root -p fusionpos_crm < backup_YYYY-MM-DD.sql`
-5. Положить из репозитория в `/var/www/crm-api/`:
-   - `api.php` (с удалённым хвостом начиная с `// file: src/index.php`)
-   - `api.include.php`
-   - `whoami.php`
-   - `config.php` (со своими паролями)
-   - `crm_api.html`
-6. Положить `/etc/nginx/sites-available/crm-api` (Nginx-конфиг)
-7. Создать `/etc/nginx/.htpasswd` через `htpasswd -c`
-8. `chown -R www-data:www-data /var/www/crm-api && chmod 640 /var/www/crm-api/config.php`
-9. `ln -s /etc/nginx/sites-available/crm-api /etc/nginx/sites-enabled/`
-10. `nginx -t && systemctl reload nginx`
-11. Проверить: `curl -u crm:PASS -H "X-API-Key: TOKEN" http://localhost/status/ping`
+---
+
+## 15. Принципы, которые помогали
+
+- **Один шаг — один заход.** БД отдельно, фронт отдельно, проверка после каждого
+- **БД — источник правды.** Все ограничения целостности через FK и NOT NULL
+- **Никаких id с фронта.** БД сама даёт INT через AUTO_INCREMENT
+- **PUT вместо PATCH** — обход бага PHP-CRUD-API
+- **`Number(x.id) === Number(y.id)`** — всегда при сравнении
+- **Пустая строка → null** для numeric/boolean/date полей перед записью
+- **Никаких секретов в этом резюме** — пароли и токены у пользователя
+- **Минимально-нужное.** Аналитика, импорты, email — после реальной работы продавца, не вперёд
+
+---
+
+## 16. Что дальше
+
+**Самое важное сейчас — дать продавцу поработать неделю-две.** После этого
+вернёмся со списком «вот это бесит / это нужно добавить», и будет понятно куда
+двигать систему. Все гипотезы сейчас — это гипотезы.
+
+---
+
+## 17. Бэкап (настроен 17 мая 2026)
+
+### Что бэкапится
+
+Каждую ночь в **03:00**:
+1. БД `fusionpos_crm` (mysqldump с триггерами и процедурами)
+2. `/var/www/crm-api/` — приложение
+3. `/etc/nginx/` — конфиг веб-сервера
+4. `/etc/php/8.3/` — настройки PHP
+5. `/etc/mysql/` — конфиг MariaDB
+6. `/etc/fail2ban/`, `/etc/ufw/`, `/etc/letsencrypt/` — защита и SSL
+7. `/etc/crontab`, `/etc/cron.d/` — планировщик
+8. `dpkg --get-selections` — список установленных пакетов
+
+### Куда хранится
+
+- **Selectel Object Storage** (S3-совместимый)
+  - Endpoint: `s3.ru-7.storage.selcloud.ru`
+  - Region: `ru-7`
+  - Bucket: `fpcrm`
+  - Структура: `s3://fpcrm/YYYY-MM-DD/` (одна папка на день)
+  - Lifecycle: удаление через **90 дней** (настроено в кабинете Selectel)
+- **Локальная копия** на сервере: `/var/backups/fusionpos/YYYY-MM-DD/`
+  - Хранится **7 дней**, потом скрипт чистит
+  - Дублирующая страховка на случай если S3 недоступен в момент аварии
+
+### Файлы на сервере
+
+```
+/usr/local/bin/backup-crm.sh    — сам скрипт (chmod +x, owner root)
+/root/.s3cfg                     — конфиг s3cmd (chmod 600, ключи Selectel)
+/root/.mysql-backup.cnf          — пароль mysqldump (chmod 600)
+/var/log/backup-crm.log          — лог запусков
+```
+
+### Cron
+
+```cron
+0 3 * * * /usr/local/bin/backup-crm.sh
+```
+
+### Восстановление из бэкапа
+
+Если VPS совсем умер:
+1. Создать новый Ubuntu VPS на Selectel
+2. Поставить пакеты: `apt install nginx mariadb-server php8.3-fpm php8.3-mysql php8.3-xml s3cmd`
+3. Скопировать `/root/.s3cfg` с ключами Selectel (взять из менеджера паролей)
+4. Скачать свежий бэкап: `s3cmd sync s3://fpcrm/YYYY-MM-DD/ /tmp/restore/`
+5. Восстановить конфиги: `cd / && tar -xzf /tmp/restore/etc-nginx.tar.gz` (и остальные)
+6. Создать БД и импорт: `mariadb -u root -p -e "CREATE DATABASE fusionpos_crm CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"` + `gunzip -c /tmp/restore/db.sql.gz | mariadb -u root -p fusionpos_crm`
+7. Восстановить приложение: `cd /var/www && tar -xzf /tmp/restore/crm-api.tar.gz`
+8. Создать DB-пользователя `crm_api` с теми же правами (пароль из `config.php`)
+9. `nginx -t && systemctl reload nginx`
+10. Проверить — открыть `http://<новый_ip>/fp_crm.html`
+
+Примерное время восстановления: 1 час с момента «голого» сервера до работающей CRM.
+
+### Проверка работы бэкапа
+
+Раз в 1-2 недели заглядывать в:
+
+```bash
+# Лог последних запусков
+tail -100 /var/log/backup-crm.log
+
+# Что есть на S3
+s3cmd ls s3://fpcrm/
+
+# Локальные копии (должно быть 7 папок)
+ls -lh /var/backups/fusionpos/
+```
+
+Если в логе перестали появляться строки `Бэкап завершён успешно` — значит cron не работает или скрипт упал. Запустить вручную и посмотреть ошибку.
+
+### Что НЕ бэкапится (намеренно)
+
+- `/var/log/` — растёт бесконечно, восстановление не критично
+- `/tmp/`, `/var/tmp/`, `/var/cache/` — мусор и кеши
+- `/var/lib/mysql/` — это сырые файлы СУБД, мы вместо этого делаем portable `mysqldump`
+- `/usr/`, `/bin/`, `/lib/` — сама ОС, восстанавливается через `apt install`
