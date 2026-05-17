@@ -305,6 +305,85 @@
   }
   .reanimate-conditional.show { display: block; }
 
+  /* ==================== PROPOSAL FORM (КП) ==================== */
+  .prop-modal { max-width: 980px; }
+  .prop-section { margin-bottom: 1.25rem; }
+  .prop-section-title {
+    font-size: 13px; font-weight: 600;
+    margin-bottom: 8px; color: var(--text-secondary);
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .prop-items {
+    border: 0.5px solid var(--border); border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .prop-items-head, .prop-items-row {
+    display: grid;
+    grid-template-columns: 28px 1fr 90px 80px 110px 80px 110px 110px 28px;
+    gap: 4px; padding: 8px 10px;
+    align-items: center;
+    font-size: 13px;
+  }
+  .prop-items-head {
+    background: var(--bg-secondary);
+    font-weight: 500; color: var(--text-secondary);
+    border-bottom: 0.5px solid var(--border);
+    font-size: 11px; text-transform: uppercase;
+  }
+  .prop-items-row {
+    border-bottom: 0.5px dashed var(--border);
+  }
+  .prop-items-row:last-child { border-bottom: none; }
+  .prop-items-row input, .prop-items-row select {
+    padding: 6px 8px; font-size: 13px;
+  }
+  .prop-items-row .name input { width: 100%; }
+  .prop-items-row .calc {
+    font-weight: 500; text-align: right; padding: 0 4px;
+  }
+  .prop-items-row .row-del {
+    background: transparent; border: none; cursor: pointer;
+    color: var(--text-tertiary); font-size: 16px;
+    padding: 0; line-height: 1;
+  }
+  .prop-items-row .row-del:hover { color: var(--danger); }
+  .prop-empty {
+    padding: 1.5rem; text-align: center;
+    color: var(--text-tertiary); font-size: 13px;
+    font-style: italic;
+  }
+  .prop-add-buttons {
+    display: flex; gap: 8px; padding: 10px;
+    border-top: 0.5px solid var(--border);
+    background: var(--bg-secondary);
+  }
+  .prop-add-buttons button {
+    font-size: 13px; padding: 6px 12px;
+  }
+  .prop-totals {
+    background: var(--bg-secondary); border-radius: var(--radius);
+    padding: 14px 18px; margin-top: 1rem;
+    display: flex; justify-content: flex-end; gap: 24px;
+    font-size: 14px;
+  }
+  .prop-totals .row {
+    display: flex; gap: 8px; align-items: baseline;
+  }
+  .prop-totals .row .lbl { color: var(--text-secondary); }
+  .prop-totals .row.main { font-size: 16px; font-weight: 600; }
+  .prop-totals .row .val { min-width: 90px; text-align: right; }
+
+  /* Адаптив для мобилки — упрощаем таблицу */
+  @media (max-width: 700px) {
+    .prop-items-head { display: none; }
+    .prop-items-row {
+      grid-template-columns: 1fr 28px;
+      gap: 8px; padding: 12px;
+    }
+    .prop-items-row > * { grid-column: 1; }
+    .prop-items-row .row-del { grid-column: 2; grid-row: 1; }
+  }
+
   /* ==================== REJECTIONS PAGE ==================== */
   .rej-section { margin-bottom: 2rem; }
   .rej-section-title {
@@ -494,17 +573,20 @@
 
   <div class="tabs">
     <div class="tab active" data-tab="dashboard">Дашборд</div>
+    <div class="tab" data-tab="leads">Лиды</div>
     <div class="tab" data-tab="kanban">Канбан</div>
     <div class="tab" data-tab="deals">Сделки</div>
     <div class="tab" data-tab="quotes">Цитаты боли</div>
     <div class="tab" data-tab="rejections">Отказы</div>
     <div class="tabs-spacer"></div>
+    <button id="btn-new-lead" class="tabs-cta" style="margin-right:8px">+ Новый лид</button>
     <button id="btn-new-deal" class="tabs-cta primary">+ Новая сделка</button>
   </div>
 
   <!-- DASHBOARD -->
   <div class="panel active" id="panel-dashboard">
     <div class="grid-stats">
+      <div class="stat"><div class="stat-label">Лиды</div><div class="stat-value" id="stat-leads" style="color:var(--gold)">—</div></div>
       <div class="stat"><div class="stat-label">Всего сделок</div><div class="stat-value" id="stat-total">—</div></div>
       <div class="stat"><div class="stat-label">Горячие</div><div class="stat-value" id="stat-hot" style="color:var(--hot-text)">—</div></div>
       <div class="stat"><div class="stat-label">Тёплые</div><div class="stat-value" id="stat-warm" style="color:var(--warm-text)">—</div></div>
@@ -520,6 +602,24 @@
       <span>Воронка слева направо. Клик по карточке → детали сделки. Чтобы изменить статус — «+ Новое касание».</span>
     </div>
     <div class="kanban-wrap" id="kanban-wrap"></div>
+  </div>
+
+  <!-- LEADS -->
+  <div class="panel" id="panel-leads">
+    <div style="color:var(--text-secondary);margin-bottom:1rem;font-size:13px">
+      Лиды — потенциальные клиенты до первого разговора. После того как дозвонились — нажмите «Принять в работу», чтобы перевести в сделку.
+    </div>
+    <div class="filter-row">
+      <button class="filter-chip active" data-lead-filter="all">Все лиды</button>
+      <button class="filter-chip" data-lead-filter="fresh">Без касаний</button>
+      <button class="filter-chip" data-lead-filter="stale">Без касаний &gt; 3 дней</button>
+      <div class="sort-control" style="margin-left:auto">
+        <span class="sort-label">Сортировка</span>
+        <button class="sort-btn active" data-lead-sort="created">Новые сверху</button>
+        <button class="sort-btn" data-lead-sort="oldest">Старые сверху</button>
+      </div>
+    </div>
+    <div id="leads-list"></div>
   </div>
 
   <!-- DEALS -->
@@ -585,11 +685,43 @@
       <div class="row">
         <div class="field">
           <label>Клиент / название</label>
-          <input type="text" id="f-client_name" placeholder='Кафе «Ромашка», Иван Петров'>
+          <input type="text" id="f-client_name" placeholder='Кафе «Ромашка»'>
         </div>
         <div class="field">
           <label>Телефон</label>
           <input type="text" id="f-phone" placeholder="+7...">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Email</label>
+          <input type="text" id="f-email" inputmode="email" placeholder="name@example.com">
+        </div>
+        <div class="field">
+          <label>Контактное лицо</label>
+          <input type="text" id="f-contact_name" placeholder="Имя Фамилия">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Должность</label>
+          <select id="f-contact_role">
+            <option value="">—</option>
+            <option>Владелец</option>
+            <option>Управляющий</option>
+            <option>Бухгалтер</option>
+            <option>Администратор</option>
+            <option>IT</option>
+            <option>Другое</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="checkbox-row" style="margin-top:24px">
+            <input type="checkbox" id="f-contact_is_dm">
+            <span>Этот контакт — ЛПР (сам принимает решения)</span>
+          </label>
         </div>
       </div>
 
@@ -645,6 +777,20 @@
           <label>Дата открытия / перехода</label>
           <input type="date" id="f-open_date">
         </div>
+      </div>
+
+      <div class="field">
+        <label>Источник</label>
+        <select id="f-source">
+          <option value="">—</option>
+          <option>Регистрация</option>
+          <option>Сайт</option>
+          <option>Выставка</option>
+          <option>Рекомендация</option>
+          <option>Холодный звонок</option>
+          <option>Реклама</option>
+          <option>Другое</option>
+        </select>
       </div>
 
       <div class="field">
@@ -713,29 +859,6 @@
             <option value="cold">Холодный</option>
           </select>
         </div>
-        <div class="field">
-          <label>Кто ЛПР</label>
-          <select id="f-dm">
-            <option value="">—</option>
-            <option>Собственник</option>
-            <option>Управляющий</option>
-            <option>Бухгалтер</option>
-            <option>IT</option>
-            <option>Товаровед</option>
-            <option>ЦТО</option>
-            <option>Автоматизатор</option>
-            <option>Наш партнёр</option>
-            <option>Другой</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="field">
-        <label class="checkbox-row">
-          <input type="checkbox" id="f-dm_is_speaker">
-          <span>Звонящий = ЛПР (он сам принимает решение)</span>
-        </label>
-        <div class="field-hint">Если нет — добавьте в «Следующий шаг»: выйти на ЛПР</div>
       </div>
 
       <div class="row">
@@ -766,9 +889,15 @@
       </div>
 
       <div class="field">
+        <label>Комментарий</label>
+        <textarea id="f-comment" rows="3" placeholder="Дополнительная информация по сделке, которой нет в других полях"></textarea>
+      </div>
+
+      <div class="field">
         <label>Статус сделки</label>
         <select id="f-status">
           <option value="">—</option>
+          <option>Лид</option>
           <option>Первичный контакт</option>
           <option>Демо назначено</option>
           <option>Демо проведено</option>
@@ -895,6 +1024,165 @@
   </div>
 </div>
 
+<!-- ==================== LEAD MODAL (упрощённая форма для нового лида) ==================== -->
+<div class="modal-bg" id="lead-modal">
+  <div class="modal" id="lead-modal-card" style="max-width:560px">
+    <div class="modal-header">
+      <div class="modal-title">Новый лид</div>
+      <button class="close-btn" id="lead-modal-close">×</button>
+    </div>
+    <div style="color:var(--text-secondary);margin-bottom:1rem;font-size:13px">
+      Минимум полей для нового лида. После первого разговора нажмите «Принять в работу» в карточке.
+    </div>
+
+    <div class="field">
+      <label>Источник *</label>
+      <select id="lead-source">
+        <option value="">— выберите —</option>
+        <option>Регистрация</option>
+        <option>Сайт</option>
+        <option>Выставка</option>
+        <option>Рекомендация</option>
+        <option>Холодный звонок</option>
+        <option>Реклама</option>
+        <option>Другое</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Название / клиент</label>
+      <input type="text" id="lead-client_name" placeholder="Кафе «Ромашка»">
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Телефон</label>
+        <input type="tel" id="lead-phone" placeholder="+7 ...">
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="text" id="lead-email" inputmode="email" placeholder="info@example.com">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Контактное лицо (если знаем)</label>
+      <input type="text" id="lead-contact_name" placeholder="Иван Петров">
+    </div>
+
+    <div class="field">
+      <label>Тип заведения (если знаем)</label>
+      <select id="lead-type">
+        <option value="">—</option>
+        <option>Кофейня</option>
+        <option>Пекарня</option>
+        <option>Кондитерская</option>
+        <option>Кафе</option>
+        <option>Ресторан</option>
+        <option>Пиццерия</option>
+        <option>Суши/роллы</option>
+        <option>Бар</option>
+        <option>Спортбар</option>
+        <option>Караоке/ночной клуб</option>
+        <option>Кальянная</option>
+        <option>Столовая</option>
+        <option>Фаст-фуд</option>
+        <option>Доставка еды</option>
+        <option>Фудтрак</option>
+        <option>Гостиница/отель</option>
+        <option>Магазин (прод.)</option>
+        <option>Фрукты/овощи</option>
+        <option>Пивной магазин</option>
+        <option>Винотека</option>
+        <option>Табачный</option>
+        <option>Аптека</option>
+        <option>Цветочный</option>
+        <option>Услуги</option>
+        <option>Другое</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Заметка (опционально)</label>
+      <textarea id="lead-note" rows="2" placeholder="Любая полезная информация — узнали с выставки, что говорил клиент..."></textarea>
+    </div>
+
+    <div class="actions">
+      <button id="lead-btn-save" class="primary">Сохранить лид</button>
+      <button id="lead-btn-cancel">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== PROPOSAL MODAL (КП) ==================== -->
+<div class="modal-bg" id="proposal-modal">
+  <div class="modal prop-modal" id="proposal-modal-card">
+    <div class="modal-header">
+      <div class="modal-title" id="proposal-modal-title">Новое коммерческое предложение</div>
+      <button class="close-btn" id="proposal-modal-close">×</button>
+    </div>
+
+    <!-- Шапка КП: дата, срок действия, комментарий -->
+    <div class="prop-section">
+      <div class="row">
+        <div class="field">
+          <label>Дата КП</label>
+          <input type="date" id="prop-date">
+        </div>
+        <div class="field">
+          <label>Действительно до</label>
+          <input type="date" id="prop-valid-until">
+        </div>
+      </div>
+      <div class="field">
+        <label>Комментарий</label>
+        <textarea id="prop-comment" rows="2" placeholder="Свободный текст: контекст КП, условия, договорённости..."></textarea>
+      </div>
+    </div>
+
+    <!-- Таблица позиций -->
+    <div class="prop-section">
+      <div class="prop-section-title">Позиции</div>
+      <div class="prop-items" id="prop-items">
+        <div class="prop-items-head">
+          <div></div>
+          <div>Наименование</div>
+          <div>Ед.</div>
+          <div>Кол-во</div>
+          <div>Цена</div>
+          <div>Ставка</div>
+          <div>НДС</div>
+          <div>Всего</div>
+          <div></div>
+        </div>
+        <div id="prop-items-body">
+          <div class="prop-empty">Добавьте позиции из каталога или создайте произвольную</div>
+        </div>
+        <div class="prop-add-buttons">
+          <button id="prop-btn-add" type="button">+ Добавить позицию</button>
+          <span style="font-size:12px;color:var(--text-tertiary);align-self:center">Начните печатать в наименовании — появятся подсказки из каталога</span>
+        </div>
+        <!-- datalist для автодополнения позиций каталога -->
+        <datalist id="catalog-datalist"></datalist>
+      </div>
+    </div>
+
+    <!-- Итоги — будут считаться на шаге 6 -->
+    <div class="prop-totals" id="prop-totals">
+      <div class="row"><span class="lbl">Без НДС:</span><span class="val" id="prop-total-no-vat">0 ₽</span></div>
+      <div class="row"><span class="lbl">В т.ч. НДС 5%:</span><span class="val" id="prop-total-vat">0 ₽</span></div>
+      <div class="row main"><span class="lbl">Всего:</span><span class="val" id="prop-total">0 ₽</span></div>
+    </div>
+
+    <!-- Действия -->
+    <div class="actions">
+      <button id="prop-btn-save-send" class="primary">Сохранить и отправить</button>
+      <button id="prop-btn-save-draft">Сохранить как черновик</button>
+      <button id="prop-btn-cancel">Отмена</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -926,10 +1214,18 @@
   // Боковые блоки
   const SIDE_STATUSES = ['Отказ', 'Не сейчас'];
 
+  // Статус «Лид» — это нулевой этап, до первого разговора.
+  // Лиды НЕ попадают в канбан и НЕ видны в списке «Сделки» по умолчанию.
+  // У них свой таб «Лиды».
+  const LEAD_STATUS = 'Лид';
+
   const FIELDS = [
-    'client_name', 'phone', 'type', 'points', 'stage', 'open_date',
-    'current_system', 'pain_quote', 'needs_text', 'temperature', 'dm', 'revenue',
-    'plan', 'hardware', 'status',
+    'client_name', 'phone', 'email',
+    'contact_name', 'contact_role',
+    'type', 'points', 'stage', 'open_date',
+    'source',
+    'current_system', 'pain_quote', 'needs_text', 'temperature', 'revenue',
+    'plan', 'hardware', 'comment', 'status',
     'fp_client_id', 'fp_domain',
     'rejection_category', 'rejection_reason', 'rejection_reason_other',
     'rejection_quote', 'reanimate_after_date',
@@ -1110,7 +1406,7 @@
   // Числовые и булевы поля — для них пустая строка '' = null
   // (HTML input type=number отдаёт '' если пусто, а MariaDB это не принимает)
   const NUMERIC_FIELDS = ['points', 'revenue', 'seller_id'];
-  const BOOLEAN_FIELDS = ['dm_is_speaker', 'can_reanimate'];
+  const BOOLEAN_FIELDS = ['contact_is_dm', 'can_reanimate'];
   const DATE_FIELDS = ['open_date', 'reanimate_after_date'];
   const DATETIME_FIELDS = ['next_date', 'created_at', 'updated_at', 'archived_at'];
 
@@ -1118,7 +1414,7 @@
   // - undefined / '' для нестроковых полей → null
   // - needs из массива в JSON-строку
   // - даты приводим к нужному виду
-  // - булевы (dm_is_speaker, can_reanimate) → 0/1
+  // - булевы (contact_is_dm, can_reanimate) → 0/1
   function serializeDeal(d) {
     const out = {};
     Object.keys(d).forEach(k => {
@@ -1230,43 +1526,52 @@
 
       // Готовим deal для записи
       const deal = serializeDeal(body);
+      // id может быть: undefined (новая) | число (существующая)
+      // Текстовые id теперь не используются — БД сама генерит INT AUTO_INCREMENT
       const isNew = !deal.id;
       if (isNew) {
-        deal.id = makeId('d');
+        // НЕ задаём id — БД сама присвоит при POST
+        delete deal.id;
         deal.created_at = nowMysql;
+      } else {
+        // Нормализуем к числу — фронт может передать строку из URL/инпута
+        deal.id = Number(deal.id);
       }
       deal.updated_at = nowMysql;
 
       // Проверка: существует ли запись (для решения POST vs PUT)
-      // Также сохраняем текущее состояние для мёрджа (PUT — это полная замена)
       let existing = null;
       if (!isNew) {
         try {
-          existing = await rest('GET', '/records/deals/' + encodeURIComponent(deal.id));
+          existing = await rest('GET', '/records/deals/' + deal.id);
         } catch (e) {
-          // 404 — записи нет, создадим
           existing = null;
         }
       }
 
+      let dealId; // финальный id записи в БД
       if (existing) {
         // PUT — полная замена. Мёрджим: сначала старое, поверх — то что прислал фронт.
-        // ВАЖНО: PUT-запрос в URL содержит /id, поле id в теле не отправляется (PHP-CRUD-API его игнорирует).
         // Используем PUT вместо PATCH из-за бага PHP-CRUD-API:
         //   "SQLSTATE[HY093]: Invalid parameter number" — баг при PATCH с одним полем.
         const merged = Object.assign({}, existing, deal);
-        // id убираем из тела — он есть в URL
         delete merged.id;
-        await rest('PUT', '/records/deals/' + encodeURIComponent(deal.id), merged);
+        await rest('PUT', '/records/deals/' + deal.id, merged);
+        dealId = deal.id;
       } else {
-        await rest('POST', '/records/deals', deal);
+        // POST — БД присвоит id и вернёт его в ответе
+        const created = await rest('POST', '/records/deals', deal);
+        // PHP-CRUD-API при POST возвращает id (число или строку)
+        dealId = (typeof created === 'number' || typeof created === 'string')
+          ? Number(created)
+          : (created && created.id ? Number(created.id) : null);
+        if (!dealId) throw new Error('Не удалось получить id новой сделки');
       }
 
-      // Activity — отдельная запись на каждое касание
-      const activityId = makeId('a');
-      const activity = {
-        id: activityId,
-        deal_id: deal.id,
+      // Activity — отдельная запись на каждое касание.
+      // id больше не задаём — БД сама. Получаем id из ответа для связи с pain_quotes.
+      const activityPayload = {
+        deal_id: dealId,
         created_at: nowMysql,
         seller_id: body.seller_id || null,
         type: body.activity_type || 'call',
@@ -1276,14 +1581,16 @@
         next_step: body.next_step || '',
         next_date: body.next_date ? toMysqlDateTime(body.next_date) : null
       };
-      await rest('POST', '/records/activity', activity);
+      const createdActivity = await rest('POST', '/records/activity', activityPayload);
+      const activityId = (typeof createdActivity === 'number' || typeof createdActivity === 'string')
+        ? Number(createdActivity)
+        : (createdActivity && createdActivity.id ? Number(createdActivity.id) : null);
 
       // Pain quote — каждое касание может добавить новую цитату
       const painText = String(body.pain_quote || '').trim();
       if (painText.length > 5) {
         const quote = {
-          id: makeId('q'),
-          deal_id: deal.id,
+          deal_id: dealId,
           activity_id: activityId,
           client_name: body.client_name || '',
           venue_type: body.type || '',
@@ -1295,7 +1602,7 @@
       }
 
       // Возвращаем обновлённую сделку с распарсенным needs
-      const fresh = await rest('GET', '/records/deals/' + encodeURIComponent(deal.id));
+      const fresh = await rest('GET', '/records/deals/' + dealId);
       fresh.needs = parseNeeds(fresh.needs);
       return { deal: fresh, activity_id: activityId };
     }
@@ -1305,31 +1612,25 @@
       // Используем PUT (полную замену), потому что PATCH в PHP-CRUD-API глючит на одиночных полях.
       const archive = body.archive !== false;
       const newArchivedAt = archive ? toMysqlDateTime(new Date().toISOString()) : null;
+      const dealId = Number(body.id);
 
-      const existing = await rest('GET', '/records/deals/' + encodeURIComponent(body.id));
+      const existing = await rest('GET', '/records/deals/' + dealId);
       const merged = Object.assign({}, existing, {
         archived_at: newArchivedAt,
         updated_at: toMysqlDateTime(new Date().toISOString())
       });
       delete merged.id;
-      await rest('PUT', '/records/deals/' + encodeURIComponent(body.id), merged);
+      await rest('PUT', '/records/deals/' + dealId, merged);
 
-      const fresh = await rest('GET', '/records/deals/' + encodeURIComponent(body.id));
+      const fresh = await rest('GET', '/records/deals/' + dealId);
       fresh.needs = parseNeeds(fresh.needs);
       return { deal: fresh };
     }
 
     if (action === 'delete') {
-      // Жёсткое удаление сделки + связанная история + цитаты
-      // PHP-CRUD-API умеет DELETE по фильтру через ?filter=
-      // Чистим в порядке: activity → pain_quotes → deals
-      try {
-        await rest('DELETE', '/records/activity', null, { filter: 'deal_id,eq,' + body.id });
-      } catch (e) { /* возможно записей не было */ }
-      try {
-        await rest('DELETE', '/records/pain_quotes', null, { filter: 'deal_id,eq,' + body.id });
-      } catch (e) { /* возможно записей не было */ }
-      await rest('DELETE', '/records/deals/' + encodeURIComponent(body.id));
+      // Жёсткое удаление сделки. activity и pain_quotes удаляются автоматически
+      // благодаря FK с ON DELETE CASCADE (миграция к INT id добавила эти ограничения).
+      await rest('DELETE', '/records/deals/' + Number(body.id));
       return { ok: true };
     }
 
@@ -1427,6 +1728,13 @@
   let currentUser = null;
   let usersById = {};
 
+  // catalog — справочник товаров и услуг (для формы КП)
+  // Структура после загрузки:
+  //   catalog.byId       — { id: {raw row}, ... }
+  //   catalog.categories — [{id, name, items:[{id, name, unit, price, vat_rate}, ...]}, ...]
+  //   catalog.loaded     — true, когда данные пришли
+  let catalog = { byId: {}, categories: [], loaded: false };
+
   function userName(seller_id) {
     if (!seller_id) return '';
     const u = usersById[seller_id];
@@ -1461,6 +1769,57 @@
     document.getElementById('current-user-name').textContent = currentUser.full_name || currentUser.login;
   }
 
+  // Загружает каталог товаров и услуг.
+  // Возвращает Promise — но не критично если упадёт, форма КП покажет ошибку, остальное работает.
+  async function loadCatalog() {
+    const resp = await rest('GET', '/records/catalog_items', null, {
+      filter: 'is_active,eq,1',
+      order: 'position,asc',
+      size: 500
+    });
+    const rows = (resp && resp.records) || [];
+    // Индекс по id
+    const byId = {};
+    rows.forEach(r => { byId[r.id] = r; });
+    // Категории — те, у кого parent_id IS NULL
+    const cats = rows
+      .filter(r => !r.parent_id)
+      .sort((a, b) => (a.position || 0) - (b.position || 0));
+    // Позиции к каждой категории
+    const categories = cats.map(c => {
+      const items = rows
+        .filter(r => r.parent_id === c.id)
+        .sort((a, b) => (a.position || 0) - (b.position || 0))
+        .map(r => ({
+          id: r.id,
+          name: r.name,
+          unit: r.unit || '',
+          price: Number(r.price || 0),
+          vat_rate: r.vat_rate || 'no_vat'
+        }));
+      return { id: c.id, name: c.name, items: items };
+    });
+    catalog = { byId: byId, categories: categories, loaded: true };
+    console.log('Каталог загружен:', categories.length, 'категорий, всего позиций:', rows.length - cats.length);
+    rebuildCatalogDatalist();
+  }
+
+  // Заполняет глобальный <datalist> позициями каталога — для автодополнения в форме КП.
+  // Префиксуем категорией, чтобы продавец видел контекст: "Услуги — Обучение персонала".
+  function rebuildCatalogDatalist() {
+    const dl = document.getElementById('catalog-datalist');
+    if (!dl) return;
+    const options = [];
+    catalog.categories.forEach(cat => {
+      cat.items.forEach(item => {
+        // value будет вставлен в input — это видимый текст
+        const label = cat.name + ' — ' + item.name;
+        options.push(`<option value="${escapeHtml(label)}" data-item-id="${item.id}"></option>`);
+      });
+    });
+    dl.innerHTML = options.join('');
+  }
+
   if (API_URL.indexOf('PASTE_') === 0 || API_TOKEN.indexOf('PASTE_') === 0) {
     document.getElementById('config-warning-host').innerHTML = `
       <div class="config-warning">
@@ -1468,11 +1827,16 @@
       </div>`;
     setSync('error', 'API не настроен');
   } else {
-    // Сначала юзер, потом — все остальные данные
+    // Сначала юзер, потом — все остальные данные параллельно
     (async () => {
       try {
         await loadCurrentUser();
-        await loadAll();
+        // Параллельно: основной список + каталог.
+        // Если каталог упадёт — не страшно, лог в консоль, всё остальное продолжает работать.
+        await Promise.all([
+          loadAll(),
+          loadCatalog().catch(e => console.warn('Не удалось загрузить каталог:', e.message))
+        ]);
       } catch (e) {
         setSync('error', 'Ошибка инициализации: ' + e.message);
         console.error(e);
@@ -1505,13 +1869,15 @@
   function mergeDealLocal(updated) {
     if (!updated || !updated.id) return;
     normalizeDeal(updated);
-    const idx = deals.findIndex(x => x.id === updated.id);
+    const idNum = Number(updated.id);
+    const idx = deals.findIndex(x => Number(x.id) === idNum);
     if (idx >= 0) deals[idx] = updated;
     else deals.unshift(updated);
   }
   function removeDealLocal(id) {
-    deals = deals.filter(d => d.id !== id);
-    quotes = quotes.filter(q => q.deal_id !== id);
+    const idNum = Number(id);
+    deals = deals.filter(d => Number(d.id) !== idNum);
+    quotes = quotes.filter(q => Number(q.deal_id) !== idNum);
   }
 
   // Tab switching — расширяем приложение на канбане
@@ -1538,7 +1904,7 @@
   // если запрос похож на цифры — дополнительно ищем по цифрам телефона.
   function dealMatchesSearch(d, q) {
     if (!q) return true;
-    const haystack = [d.client_name, d.dm, d.current_system, d.phone]
+    const haystack = [d.client_name, d.contact_name, d.email, d.current_system, d.phone, d.comment]
       .map(normalizeSearch).join(' \u0001 ');
     if (haystack.indexOf(q) !== -1) return true;
     // Если запрос содержит цифры — сверяемся ещё и по нормализованному телефону
@@ -1633,15 +1999,21 @@
     renderDashboard();
     renderKanban();
     renderDeals();
+    renderLeads();
     renderQuotes();
     updateChecklistStatus();
   }
 
   function isArchived(d) { return !!d.archived_at; }
-  function activeDeals() { return deals.filter(d => !isArchived(d)); }
+  function isLead(d) { return d.status === LEAD_STATUS; }
+  // Сделки = не архив и не лид. Используется в дашборде и канбане.
+  function activeDeals() { return deals.filter(d => !isArchived(d) && !isLead(d)); }
+  // Лиды — отдельный список.
+  function activeLeads() { return deals.filter(d => !isArchived(d) && isLead(d)); }
 
   function renderDashboard() {
     const active = activeDeals();
+    document.getElementById('stat-leads').textContent = activeLeads().length;
     document.getElementById('stat-total').textContent = active.length;
     document.getElementById('stat-hot').textContent = active.filter(d => d.temperature === 'hot').length;
     document.getElementById('stat-warm').textContent = active.filter(d => d.temperature === 'warm').length;
@@ -1827,6 +2199,76 @@
     // Клики обрабатываются делегированно на #deals-list
   }
 
+  // ==================== LEADS ====================
+  // Глобальные настройки таба «Лиды» — фильтр и сортировка.
+  let leadFilter = 'all';
+  let leadSort = 'created';
+
+  // Считает количество дней с последнего касания у лида.
+  // Использует activity (если оно загружено для конкретной сделки) — но здесь
+  // мы работаем со списком, поэтому опираемся на updated_at сделки.
+  // Это приближение: updated_at меняется при любом редактировании, не только касаний.
+  function daysSinceTouch(d) {
+    const ref = d.updated_at || d.created_at;
+    if (!ref) return null;
+    const diff = (Date.now() - new Date(ref).getTime()) / (1000 * 60 * 60 * 24);
+    return Math.floor(diff);
+  }
+
+  function renderLeads() {
+    const el = document.getElementById('leads-list');
+    if (!el) return;
+    let list = activeLeads();
+
+    // Фильтр
+    if (leadFilter === 'fresh') {
+      // Без касаний: created_at == updated_at (никто не редактировал)
+      list = list.filter(d => {
+        if (!d.created_at || !d.updated_at) return true;
+        return Math.abs(new Date(d.updated_at) - new Date(d.created_at)) < 60 * 1000; // в пределах минуты
+      });
+    } else if (leadFilter === 'stale') {
+      list = list.filter(d => (daysSinceTouch(d) || 0) > 3);
+    }
+
+    // Сортировка
+    if (leadSort === 'oldest') {
+      list.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+    } else {
+      list.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    }
+
+    if (list.length === 0) {
+      el.innerHTML = '<div class="empty">Лидов под этот фильтр нет. Нажмите «+ Новый лид» чтобы добавить.</div>';
+      return;
+    }
+
+    el.innerHTML = list.map(d => {
+      const days = daysSinceTouch(d);
+      let badge = '';
+      if (days === 0) badge = '<span style="color:var(--success);font-size:11px">сегодня</span>';
+      else if (days === 1) badge = '<span style="font-size:11px;color:var(--text-secondary)">вчера</span>';
+      else if (days > 3) badge = `<span style="color:var(--danger);font-size:11px">${days} дн.</span>`;
+      else badge = `<span style="color:var(--text-secondary);font-size:11px">${days} дн. назад</span>`;
+
+      const contactInfo = [d.contact_name, d.contact_role].filter(Boolean).join(' · ');
+
+      return `
+        <div class="deal-row" data-id="${d.id}">
+          <div class="deal-main">
+            <div class="deal-name">${escapeHtml(d.client_name || '— без названия —')}</div>
+            <div class="deal-meta">
+              ${d.source ? '<span style="background:var(--bg-secondary);padding:2px 8px;border-radius:var(--radius);font-size:11px;margin-right:6px">' + escapeHtml(d.source) + '</span>' : ''}
+              ${d.type ? escapeHtml(d.type) + ' · ' : ''}${d.phone ? escapeHtml(d.phone) : ''}${d.email ? (d.phone ? ' · ' : '') + escapeHtml(d.email) : ''}
+              ${contactInfo ? '<br><span style="color:var(--text-secondary);font-size:12px">' + escapeHtml(contactInfo) + '</span>' : ''}
+            </div>
+          </div>
+          <div style="text-align:right">${badge}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
   function renderQuotes() {
     const el = document.getElementById('quotes-list');
     if (quotes.length === 0) {
@@ -1982,13 +2424,15 @@
     document.querySelectorAll('#f-needs .need-chip.checked').forEach(c => {
       obj.needs.push(c.dataset.value);
     });
-    obj.dm_is_speaker = document.getElementById('f-dm_is_speaker').checked;
+    obj.contact_is_dm = document.getElementById('f-contact_is_dm').checked;
     obj.can_reanimate = document.getElementById('f-can_reanimate').checked;
     const fpRadio = document.querySelector('input[name="fp_version"]:checked');
     obj.fp_version = fpRadio ? fpRadio.value : '';
     // Подписываем сделку текущим пользователем
     obj.seller_id = (currentUser && currentUser.id) ? currentUser.id : null;
-    obj.id = document.getElementById('f-id').value || undefined;
+    // id берём из скрытого поля; для новой сделки — undefined, для существующей — INT
+    const rawId = document.getElementById('f-id').value;
+    obj.id = rawId ? Number(rawId) : undefined;
     return obj;
   }
 
@@ -2014,7 +2458,7 @@
       const chip = document.querySelector(sel);
       if (chip) chip.classList.add('checked');
     });
-    document.getElementById('f-dm_is_speaker').checked = !!deal.dm_is_speaker;
+    document.getElementById('f-contact_is_dm').checked = !!deal.contact_is_dm;
     document.getElementById('f-can_reanimate').checked = !!deal.can_reanimate;
     document.querySelectorAll('input[name="fp_version"]').forEach(r => {
       r.checked = (String(deal.fp_version || '') === r.value);
@@ -2042,7 +2486,7 @@
       else el.value = '';
     });
     document.querySelectorAll('#f-needs .need-chip').forEach(c => c.classList.remove('checked'));
-    document.getElementById('f-dm_is_speaker').checked = false;
+    document.getElementById('f-contact_is_dm').checked = false;
     document.getElementById('f-can_reanimate').checked = false;
     document.querySelectorAll('input[name="fp_version"]').forEach(r => {
       r.checked = (r.value === '');
@@ -2177,6 +2621,26 @@
     const row = e.target.closest('.deal-row');
     if (row && row.dataset.id) openDetail(row.dataset.id);
   });
+
+  // Клики и фильтры в табе «Лиды»
+  document.getElementById('leads-list').addEventListener('click', e => {
+    const row = e.target.closest('.deal-row');
+    if (row && row.dataset.id) openDetail(row.dataset.id);
+  });
+  document.querySelectorAll('[data-lead-filter]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      leadFilter = btn.dataset.leadFilter;
+      document.querySelectorAll('[data-lead-filter]').forEach(b => b.classList.toggle('active', b === btn));
+      renderLeads();
+    });
+  });
+  document.querySelectorAll('[data-lead-sort]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      leadSort = btn.dataset.leadSort;
+      document.querySelectorAll('[data-lead-sort]').forEach(b => b.classList.toggle('active', b === btn));
+      renderLeads();
+    });
+  });
   document.getElementById('kanban-wrap').addEventListener('click', e => {
     const sideHeader = e.target.closest('.kanban-side-header');
     if (sideHeader) {
@@ -2222,9 +2686,11 @@
       render();
       // Возврат в view-режим модалки той же сделки — контекст не теряется
       if (resp && resp.deal) {
-        currentModalDeal = deals.find(x => x.id === resp.deal.id) || resp.deal;
+        const dealIdNum = Number(resp.deal.id);
+        currentModalDeal = deals.find(x => Number(x.id) === dealIdNum) || resp.deal;
         renderModalView(currentModalDeal);
         loadActivityForCurrentDeal(currentModalDeal.id);
+        loadProposalsForCurrentDeal(currentModalDeal.id);
         setModalMode('view');
       } else {
         closeDetailModal();
@@ -2243,6 +2709,7 @@
       // Существующая сделка — возвращаемся в режим view
       renderModalView(currentModalDeal);
       loadActivityForCurrentDeal(currentModalDeal.id);
+      loadProposalsForCurrentDeal(currentModalDeal.id);
       setModalMode('view');
     } else {
       // Новая сделка — закрываем модалку (форсированно, проверку уже сделали)
@@ -2310,13 +2777,15 @@
 
   // Открыть модалку конкретной сделки в режиме view
   async function openDetail(id) {
-    const d = deals.find(x => x.id === id);
+    const idNum = Number(id);
+    const d = deals.find(x => Number(x.id) === idNum);
     if (!d) return;
     currentModalDeal = d;
     renderModalView(d);
     setModalMode('view');
     document.getElementById('detail-modal').classList.add('show');
     loadActivityForCurrentDeal(d.id);
+    loadProposalsForCurrentDeal(d.id);
   }
 
   function renderModalView(d) {
@@ -2325,16 +2794,18 @@
     document.getElementById('modal-title').textContent = (d.client_name || 'Без названия') + (archived ? ' · 📦 архив' : '');
     document.getElementById('modal-body').innerHTML = `
       <div class="detail-grid">
-        <div>Телефон</div><div>${escapeHtml(d.phone || '—')}</div>
+        <div>Телефон</div><div>${escapeHtml(d.phone || '—')}${d.email ? ' · ' + escapeHtml(d.email) : ''}</div>
         <div>Формат / точек</div><div>${escapeHtml(d.type || '—')} · ${escapeHtml(String(d.points || '—'))}</div>
         <div>Стадия</div><div>${escapeHtml(d.stage || '—')}${d.open_date ? ' · ' + escapeHtml(String(d.open_date).slice(0, 10)) : ''}</div>
+        ${d.source ? '<div>Источник</div><div>' + escapeHtml(d.source) + '</div>' : ''}
         <div>Сейчас на</div><div>${escapeHtml(d.current_system || '—')}</div>
         <div>Потребности</div><div>${needs.map(escapeHtml).join(', ') || '—'}${d.needs_text ? '<br><span style="color:var(--text-secondary);font-size:13px">' + escapeHtml(d.needs_text) + '</span>' : ''}</div>
         <div>Температура</div><div>${tempBadge(d.temperature)}</div>
-        <div>ЛПР</div><div>${escapeHtml(d.dm || '—')}${d.dm_is_speaker ? ' (это звонящий)' : (d.dm ? ' — не звонящий' : '')}</div>
+        <div>Контакт</div><div>${escapeHtml(d.contact_name || '—')}${d.contact_role ? ' · ' + escapeHtml(d.contact_role) : ''}${d.contact_is_dm ? ' · <strong>ЛПР</strong>' : ''}</div>
         <div>Оборот</div><div>${d.revenue ? Number(d.revenue).toLocaleString('ru-RU') + ' ₽/мес' : '—'}</div>
         <div>Тариф</div><div>${escapeHtml(d.plan || '—')}</div>
         <div>Оборудование</div><div>${escapeHtml(d.hardware || '—')}</div>
+        ${d.comment ? '<div>Комментарий</div><div style="white-space:pre-wrap">' + escapeHtml(d.comment) + '</div>' : ''}
         <div>Статус</div><div>${escapeHtml(d.status || '—')}${d.status === 'Отказ' && d.rejection_category ? ' · ' + escapeHtml(d.rejection_category) + (d.rejection_reason ? ' › ' + escapeHtml(d.rejection_reason) : '') : ''}</div>
         <div>FP Client ID</div><div>${escapeHtml(d.fp_client_id || '—')}</div>
         <div>FP Domain</div><div>${escapeHtml(d.fp_domain || '—')}</div>
@@ -2351,10 +2822,16 @@
         </div>
       ` : ''}
       <div class="actions">
-        <button id="modal-continue" class="primary">+ Новое касание</button>
+        ${isLead(d) ? '<button id="modal-accept-lead" class="primary">🤝 Принять в работу</button>' : ''}
+        <button id="modal-continue" ${isLead(d) ? '' : 'class="primary"'}>+ Новое касание</button>
         <button id="modal-edit">Редактировать карточку</button>
         <button id="modal-archive">${archived ? '↺ Восстановить из архива' : '📦 В архив'}</button>
       </div>
+      <div class="section-title" style="font-size:14px;margin-top:1.5rem;display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span>Коммерческие предложения</span>
+        <button id="modal-new-proposal" style="font-size:12px;padding:4px 10px">+ Новое КП</button>
+      </div>
+      <div id="proposals-host"><div class="empty">Загружаем...</div></div>
       <div class="section-title" style="font-size:14px;margin-top:1.5rem">История касаний</div>
       <div id="activity-host"><div class="empty">Загружаем...</div></div>
     `;
@@ -2362,6 +2839,13 @@
     // Кнопки внутри view — переключают на edit (форма уже в DOM)
     document.getElementById('modal-continue').addEventListener('click', () => switchToEdit(d, 'continue'));
     document.getElementById('modal-edit').addEventListener('click', () => switchToEdit(d, 'edit'));
+    // Кнопка «🤝 Принять в работу» появляется только для лидов
+    const acceptBtn = document.getElementById('modal-accept-lead');
+    if (acceptBtn) acceptBtn.addEventListener('click', () => acceptLead(d.id));
+    // Кнопка «+ Новое КП» — открывает форму создания
+    document.getElementById('modal-new-proposal').addEventListener('click', () => {
+      openProposalForm(d);
+    });
     document.getElementById('modal-archive').addEventListener('click', async () => {
       const willArchive = !archived;
       const confirmMsg = willArchive
@@ -2432,12 +2916,935 @@
     }
   }
 
+  // ==================== PROPOSALS (КП) ====================
+  // Список КП в карточке сделки. Создание/редактирование — следующим шагом.
+  function proposalStatusLabel(s) {
+    return { draft: 'черновик', sent: 'отправлено', cancelled: 'отменено' }[s] || s;
+  }
+  function proposalStatusColor(s) {
+    if (s === 'sent') return 'var(--success)';
+    if (s === 'cancelled') return 'var(--text-tertiary)';
+    return 'var(--gold)'; // draft
+  }
+
+  async function loadProposalsForCurrentDeal(dealId) {
+    const host = document.getElementById('proposals-host');
+    if (!host) return;
+    try {
+      const resp = await rest('GET', '/records/proposals', null, {
+        filter: 'deal_id,eq,' + dealId,
+        order: 'created_at,desc',
+        size: 100
+      });
+      const proposals = (resp && resp.records) || [];
+      if (proposals.length === 0) {
+        host.innerHTML = '<div class="empty">КП по этой сделке пока нет</div>';
+        return;
+      }
+      host.innerHTML = proposals.map(p => {
+        const total = Number(p.total_amount || 0).toLocaleString('ru-RU') + ' ₽';
+        const dateStr = p.date ? new Date(p.date).toLocaleDateString('ru-RU') : '';
+        const canEdit = p.status !== 'cancelled';
+        return `
+          <div class="deal-row" data-proposal-id="${p.id}" style="cursor:default">
+            <div class="deal-main">
+              <div class="deal-name">КП №${p.id} · ${escapeHtml(dateStr)}</div>
+              <div class="deal-meta">${escapeHtml(p.comment || 'без комментария')}</div>
+            </div>
+            <div style="font-weight:500">${total}</div>
+            <div style="font-size:12px;padding:3px 10px;border-radius:var(--radius);background:var(--bg-secondary);color:${proposalStatusColor(p.status)};text-transform:uppercase">
+              ${escapeHtml(proposalStatusLabel(p.status))}
+            </div>
+            ${canEdit ? `<button class="prop-edit-btn" data-proposal-id="${p.id}" data-status="${p.status}" style="font-size:12px;padding:4px 10px" title="Редактировать КП">✏️ Изменить</button>` : ''}
+            <button class="prop-print-btn" data-proposal-id="${p.id}" style="font-size:12px;padding:4px 10px" title="Открыть печатную форму">📄 Печать</button>
+          </div>
+        `;
+      }).join('');
+
+      // Привязываем кнопки печати
+      host.querySelectorAll('.prop-print-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          const pid = parseInt(btn.dataset.proposalId, 10);
+          printProposal(pid);
+        });
+      });
+      // Привязываем кнопки редактирования
+      host.querySelectorAll('.prop-edit-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          const pid = parseInt(btn.dataset.proposalId, 10);
+          const status = btn.dataset.status;
+          openEditProposal(pid, status);
+        });
+      });
+    } catch (e) {
+      host.innerHTML = '<div class="empty">Не удалось загрузить КП: ' + escapeHtml(e.message) + '</div>';
+    }
+  }
+
+  // ==================== ПЕЧАТНАЯ ФОРМА КП ====================
+  // Открывается в новом окне. Пользователь нажимает Ctrl+P → Сохранить как PDF.
+
+  async function printProposal(proposalId) {
+    let win = null;
+    try {
+      // Сразу открываем окно — иначе браузер может заблокировать как pop-up.
+      // Показываем placeholder пока данные грузятся.
+      win = window.open('', '_blank', 'width=900,height=1200');
+      if (!win) {
+        showToast('Браузер заблокировал всплывающее окно. Разрешите pop-up и повторите.', true);
+        return;
+      }
+      win.document.write('<title>КП №' + proposalId + '</title><body style="font-family:sans-serif;padding:2rem">Загрузка КП №' + proposalId + '...</body>');
+
+      // Грузим параллельно:
+      //   - саму запись КП (с шапкой и итогами)
+      //   - позиции (proposal_items)
+      //   - сделку (для имени клиента)
+      const [proposal, itemsResp] = await Promise.all([
+        rest('GET', '/records/proposals/' + proposalId),
+        rest('GET', '/records/proposal_items', null, {
+          filter: 'proposal_id,eq,' + proposalId,
+          order: 'position,asc',
+          size: 500
+        })
+      ]);
+      const items = (itemsResp && itemsResp.records) || [];
+
+      // Сделка — для имени клиента. Берём из локального массива если есть, иначе запрос.
+      const dealIdNum = Number(proposal.deal_id);
+      let deal = deals.find(d => Number(d.id) === dealIdNum);
+      if (!deal) {
+        try { deal = await rest('GET', '/records/deals/' + dealIdNum); }
+        catch (e) { deal = { client_name: '—' }; }
+      }
+
+      // Продавец — из словаря usersById
+      const seller = (proposal.seller_id && usersById[proposal.seller_id]) || null;
+
+      const html = buildProposalPrintHtml(proposal, items, deal, seller);
+      // Перезаписываем содержимое окна
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+    } catch (e) {
+      console.error('Ошибка печати КП:', e);
+      if (win && !win.closed) {
+        win.document.open();
+        win.document.write('<body style="font-family:sans-serif;padding:2rem;color:#c00">Не удалось загрузить КП №' + proposalId + ': ' + escapeHtml(e.message) + '</body>');
+        win.document.close();
+      } else {
+        showToast('Ошибка печати: ' + e.message, true);
+      }
+    }
+  }
+
+  // Строит полный HTML печатной формы. Возвращает строку, которую можно записать в окно.
+  function buildProposalPrintHtml(proposal, items, deal, seller) {
+    const propNum = proposal.id;
+    const dateStr = proposal.date ? new Date(proposal.date).toLocaleDateString('ru-RU') : '—';
+    const validStr = proposal.valid_until ? new Date(proposal.valid_until).toLocaleDateString('ru-RU') : '';
+    const clientName = (deal && deal.client_name) ? deal.client_name : '—';
+    const sellerName = seller ? (seller.full_name || seller.login) : '—';
+    const sellerPhone = seller && seller.phone ? seller.phone : '';
+    const sellerEmail = seller && seller.email ? seller.email : '';
+
+    const total = Number(proposal.total_amount || 0);
+    const totalVat = Number(proposal.total_vat || 0);
+    const totalNoVat = Number(proposal.total_no_vat || 0);
+
+    const fmt = n => Number(n || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₽';
+
+    const rowsHtml = items.map((it, i) => {
+      const qty = Number(it.quantity) || 0;
+      const price = Number(it.price) || 0;
+      const amount = Number(it.amount) || 0;
+      const vat = Number(it.vat_amount) || 0;
+      const isNoVat = !it.vat_rate || it.vat_rate === 'no_vat';
+      const vatLabel = isNoVat ? 'Без НДС' : (it.vat_rate + '%');
+      const vatCell = isNoVat ? '—' : fmt(vat);
+      return `
+        <tr>
+          <td style="text-align:center">${i + 1}</td>
+          <td>${escapeHtml(it.name)}</td>
+          <td style="text-align:center">${escapeHtml(it.unit || '')}</td>
+          <td style="text-align:right">${qty.toLocaleString('ru-RU')}</td>
+          <td style="text-align:right">${fmt(price)}</td>
+          <td style="text-align:center">${vatLabel}</td>
+          <td style="text-align:right">${vatCell}</td>
+          <td style="text-align:right;font-weight:600">${fmt(amount)}</td>
+        </tr>
+      `;
+    }).join('');
+
+    // Простой, чистый HTML с inline-стилями — независим от crm.html
+    return `<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>КП №${propNum} — ${escapeHtml(clientName)}</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; color: #222; max-width: 800px; margin: 0 auto; padding: 24px; font-size: 14px; line-height: 1.5; }
+  .head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #222; padding-bottom: 12px; margin-bottom: 24px; }
+  .head .brand { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+  .head .seller { text-align: right; font-size: 13px; color: #555; }
+  .title { text-align: center; margin: 28px 0 8px; font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  .subtitle { text-align: center; color: #555; margin-bottom: 24px; font-size: 13px; }
+  .meta { background: #f7f7f7; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; }
+  .meta .row { display: flex; gap: 12px; margin-bottom: 4px; }
+  .meta .row:last-child { margin-bottom: 0; }
+  .meta .lbl { color: #666; min-width: 130px; }
+  table.items { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px; }
+  table.items th, table.items td { border: 1px solid #ddd; padding: 8px 10px; vertical-align: top; }
+  table.items th { background: #f0f0f0; font-weight: 600; text-align: left; }
+  table.items th:nth-child(1), table.items td:nth-child(1) { width: 36px; text-align: center; }
+  .totals { margin: 24px 0 32px; display: flex; justify-content: flex-end; }
+  .totals table { border-collapse: collapse; font-size: 14px; }
+  .totals td { padding: 4px 12px; }
+  .totals td:first-child { color: #666; text-align: right; }
+  .totals td:last-child { text-align: right; font-weight: 500; min-width: 120px; }
+  .totals tr.main td { font-weight: 700; font-size: 16px; padding-top: 8px; border-top: 1px solid #222; }
+  .comment { padding: 12px 16px; background: #fffaf0; border-left: 3px solid #f4b400; margin: 16px 0; font-size: 13px; }
+  .footer { margin-top: 40px; display: flex; justify-content: space-between; align-items: flex-end; font-size: 13px; }
+  .footer .signature { border-top: 1px solid #999; padding-top: 6px; min-width: 220px; text-align: center; color: #555; }
+  .notes { font-size: 12px; color: #777; margin-top: 24px; line-height: 1.5; }
+
+  /* Печать */
+  @media print {
+    body { padding: 0; max-width: none; }
+    @page { size: A4; margin: 18mm 16mm; }
+  }
+</style>
+</head>
+<body>
+
+<div class="head">
+  <div class="brand">FUSIONPOS</div>
+  <div class="seller">
+    <div><strong>${escapeHtml(sellerName)}</strong></div>
+    ${sellerPhone ? '<div>Тел.: ' + escapeHtml(sellerPhone) + '</div>' : ''}
+    ${sellerEmail ? '<div>Email: ' + escapeHtml(sellerEmail) + '</div>' : ''}
+  </div>
+</div>
+
+<div class="title">Коммерческое предложение №${propNum}</div>
+<div class="subtitle">от ${dateStr}${validStr ? ' &nbsp;·&nbsp; Действительно до ' + validStr : ''}</div>
+
+<div class="meta">
+  <div class="row"><span class="lbl">Кому:</span><span><strong>${escapeHtml(clientName)}</strong></span></div>
+</div>
+
+${proposal.comment ? '<div class="comment">' + escapeHtml(proposal.comment) + '</div>' : ''}
+
+<table class="items">
+  <thead>
+    <tr>
+      <th>№</th>
+      <th>Наименование</th>
+      <th style="text-align:center">Ед.</th>
+      <th style="text-align:right">Кол-во</th>
+      <th style="text-align:right">Цена</th>
+      <th style="text-align:center">Ставка НДС</th>
+      <th style="text-align:right">Сумма НДС</th>
+      <th style="text-align:right">Всего</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${rowsHtml}
+  </tbody>
+</table>
+
+<div class="totals">
+  <table>
+    <tr><td>Без НДС:</td><td>${fmt(totalNoVat)}</td></tr>
+    <tr><td>В т.ч. НДС:</td><td>${fmt(totalVat)}</td></tr>
+    <tr class="main"><td>Всего к оплате:</td><td>${fmt(total)}</td></tr>
+  </table>
+</div>
+
+<div class="footer">
+  <div>
+    <div style="margin-bottom: 4px"><strong>С уважением,</strong></div>
+    <div>${escapeHtml(sellerName)}</div>
+    <div style="color:#666;font-size:12px;margin-top: 2px">FUSIONPOS</div>
+  </div>
+  <div class="signature">подпись / печать</div>
+</div>
+
+<div class="notes">
+  Цены указаны с учётом НДС, где применимо. Лицензии — без НДС (российское ПО, реестр №31687).
+  ${validStr ? 'Условия КП действуют до ' + validStr + '.' : ''}
+</div>
+
+</body>
+</html>`;
+  }
+
+  // ==================== PROPOSAL FORM (КП) ====================
+  // Модалка создания КП. Шаг 5a: только UI без расчётов и сохранения.
+  // Шаг 6 добавит расчёты, шаг 7 — сохранение в БД.
+
+  // Состояние формы КП:
+  //   deal           — для какой сделки
+  //   items[]        — позиции в форме
+  //   editingId      — id редактируемого КП (null если создаём новое)
+  //   originalStatus — какой статус был у редактируемого КП (для логики кнопок)
+  let proposalForm = {
+    deal: null,
+    items: [],
+    editingId: null,
+    originalStatus: null
+  };
+
+  // Открыть форму для НОВОГО КП
+  function openProposalForm(deal) {
+    proposalForm = { deal: deal, items: [], editingId: null, originalStatus: null };
+
+    document.getElementById('proposal-modal-title').textContent =
+      'Новое КП — ' + (deal.client_name || 'без названия');
+
+    // Дата по умолчанию — сегодня
+    const today = new Date();
+    const todayStr = today.toISOString().slice(0, 10);
+    document.getElementById('prop-date').value = todayStr;
+
+    // Срок действия — +7 дней
+    const validUntil = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+    document.getElementById('prop-valid-until').value = validUntil.toISOString().slice(0, 10);
+
+    document.getElementById('prop-comment').value = '';
+
+    // Кнопки: «Сохранить и отправить» (primary) + «Сохранить как черновик»
+    updateProposalFormButtons('new');
+
+    renderProposalItems();
+    document.getElementById('proposal-modal').classList.add('show');
+    document.getElementById('proposal-modal').scrollTop = 0;
+  }
+
+  // Открыть форму для РЕДАКТИРОВАНИЯ существующего КП
+  async function openEditProposal(proposalId, status) {
+    if (status === 'cancelled') {
+      showToast('Отменённое КП редактировать нельзя', true);
+      return;
+    }
+    if (status === 'sent') {
+      const ok = confirm(
+        'Это КП уже отправлено клиенту.\n\n' +
+        'Изменения попадут только в систему — клиент видит ту версию, которую вы ему отправили ранее.\n\n' +
+        'Продолжить редактирование?'
+      );
+      if (!ok) return;
+    }
+
+    setSync('syncing', 'Загружаем КП №' + proposalId + '...');
+    try {
+      const [proposal, itemsResp] = await Promise.all([
+        rest('GET', '/records/proposals/' + proposalId),
+        rest('GET', '/records/proposal_items', null, {
+          filter: 'proposal_id,eq,' + proposalId,
+          order: 'position,asc',
+          size: 500
+        })
+      ]);
+      const items = (itemsResp && itemsResp.records) || [];
+
+      // Находим сделку для имени клиента в заголовке
+      let deal = deals.find(d => d.id === proposal.deal_id);
+      if (!deal) deal = { id: proposal.deal_id, client_name: '—' };
+
+      // Заполняем состояние формы
+      proposalForm = {
+        deal: deal,
+        items: items.map(it => ({
+          catalog_item_id: it.catalog_item_id || null,
+          name: it.name || '',
+          unit: it.unit || '',
+          quantity: Number(it.quantity) || 0,
+          price: Number(it.price) || 0,
+          vat_rate: it.vat_rate || 'no_vat'
+        })),
+        editingId: proposal.id,
+        originalStatus: proposal.status
+      };
+
+      // Заголовок и поля
+      document.getElementById('proposal-modal-title').textContent =
+        'Редактирование КП №' + proposal.id + ' — ' + (deal.client_name || 'без названия');
+      document.getElementById('prop-date').value = proposal.date || '';
+      document.getElementById('prop-valid-until').value = proposal.valid_until || '';
+      document.getElementById('prop-comment').value = proposal.comment || '';
+
+      updateProposalFormButtons('edit');
+      renderProposalItems();
+      setSync('ok', 'Готово');
+      document.getElementById('proposal-modal').classList.add('show');
+      document.getElementById('proposal-modal').scrollTop = 0;
+    } catch (e) {
+      setSync('error', 'Не удалось загрузить КП');
+      showToast('Ошибка загрузки КП: ' + e.message, true);
+      console.error(e);
+    }
+  }
+
+  // Подписи и набор кнопок зависят от режима: new / edit.
+  // В режиме edit:
+  //   - draft → «Сохранить (остаётся черновиком)» + «Сохранить и отправить»
+  //   - sent  → «Сохранить» (status не меняется)
+  function updateProposalFormButtons(mode) {
+    const btnSend = document.getElementById('prop-btn-save-send');
+    const btnDraft = document.getElementById('prop-btn-save-draft');
+    if (mode === 'new') {
+      btnSend.textContent = 'Сохранить и отправить';
+      btnSend.style.display = '';
+      btnDraft.textContent = 'Сохранить как черновик';
+      btnDraft.style.display = '';
+    } else if (mode === 'edit') {
+      if (proposalForm.originalStatus === 'sent') {
+        // КП уже отправлено — кнопка одна, ничего не отправляем повторно
+        btnDraft.textContent = 'Сохранить изменения';
+        btnDraft.style.display = '';
+        btnSend.style.display = 'none';
+      } else {
+        // draft → можно сохранить как черновик ИЛИ отправить
+        btnDraft.textContent = 'Сохранить (черновик)';
+        btnDraft.style.display = '';
+        btnSend.textContent = 'Сохранить и отправить';
+        btnSend.style.display = '';
+      }
+    }
+  }
+
+  function closeProposalForm() {
+    document.getElementById('proposal-modal').classList.remove('show');
+  }
+
+  // Рендер таблицы позиций
+  // ==================== РАСЧЁТЫ КП ====================
+  // НДС считается «изнутри» цены: для ставки 5% НДС = сумма × 5 / 105.
+  // Для "no_vat" НДС не считается, в итогах не учитывается.
+
+  function calcRow(item) {
+    const qty = Number(item.quantity) || 0;
+    const price = Number(item.price) || 0;
+    const amount = qty * price;
+    let vat_amount = 0;
+    if (item.vat_rate && item.vat_rate !== 'no_vat') {
+      const rate = Number(item.vat_rate);
+      if (rate > 0) {
+        vat_amount = amount * rate / (100 + rate);
+      }
+    }
+    return { amount: amount, vat_amount: vat_amount };
+  }
+
+  function calcTotals(items) {
+    let total = 0, total_vat = 0, total_no_vat = 0;
+    items.forEach(it => {
+      const r = calcRow(it);
+      total += r.amount;
+      total_vat += r.vat_amount;
+      if (!it.vat_rate || it.vat_rate === 'no_vat') total_no_vat += r.amount;
+    });
+    return { total: total, total_vat: total_vat, total_no_vat: total_no_vat };
+  }
+
+  function fmtMoney(n) {
+    const v = Number(n) || 0;
+    // 2 знака после запятой, разделители тысяч
+    return v.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₽';
+  }
+
+  // Обновляет колонки «НДС» и «Всего» в одной строке, не перерисовывая всю таблицу.
+  // Так фокус в инпуте не теряется во время набора.
+  function updateRowCalcs(idx) {
+    const row = document.querySelector(`#prop-items-body .prop-items-row[data-idx="${idx}"]`);
+    if (!row) return;
+    const it = proposalForm.items[idx];
+    const r = calcRow(it);
+    const vatCell = row.querySelector('[data-calc="vat"]');
+    const amountCell = row.querySelector('[data-calc="amount"]');
+    if (vatCell) vatCell.textContent = (it.vat_rate === 'no_vat' || !it.vat_rate)
+      ? '—'
+      : fmtMoney(r.vat_amount);
+    if (amountCell) amountCell.textContent = fmtMoney(r.amount);
+  }
+
+  function updateTotals() {
+    const t = calcTotals(proposalForm.items);
+    document.getElementById('prop-total-no-vat').textContent = fmtMoney(t.total_no_vat);
+    document.getElementById('prop-total-vat').textContent = fmtMoney(t.total_vat);
+    document.getElementById('prop-total').textContent = fmtMoney(t.total);
+  }
+
+  function renderProposalItems() {
+    const body = document.getElementById('prop-items-body');
+    if (proposalForm.items.length === 0) {
+      body.innerHTML = '<div class="prop-empty">Добавьте позиции из каталога или создайте произвольную</div>';
+      updateTotals();
+      return;
+    }
+    body.innerHTML = proposalForm.items.map((it, i) => {
+      const r = calcRow(it);
+      const vatText = (it.vat_rate === 'no_vat' || !it.vat_rate) ? '—' : fmtMoney(r.vat_amount);
+      const amountText = fmtMoney(r.amount);
+      return `
+      <div class="prop-items-row" data-idx="${i}">
+        <div style="color:var(--text-tertiary);font-size:12px">${i + 1}</div>
+        <div class="name"><input type="text" data-field="name" list="catalog-datalist" value="${escapeHtml(it.name)}" placeholder="Начните печатать..."></div>
+        <div><input type="text" data-field="unit" value="${escapeHtml(it.unit || '')}"></div>
+        <div><input type="number" data-field="quantity" value="${it.quantity}" min="0" step="0.001"></div>
+        <div><input type="number" data-field="price" value="${it.price}" min="0" step="0.01"></div>
+        <div>
+          <select data-field="vat_rate">
+            <option value="no_vat" ${it.vat_rate === 'no_vat' ? 'selected' : ''}>Без НДС</option>
+            <option value="5" ${it.vat_rate === '5' ? 'selected' : ''}>5%</option>
+          </select>
+        </div>
+        <div class="calc" data-calc="vat">${vatText}</div>
+        <div class="calc" data-calc="amount">${amountText}</div>
+        <div><button type="button" class="row-del" title="Удалить">×</button></div>
+      </div>`;
+    }).join('');
+
+    // Привязываем события на input/select — обновляем модель и пересчитываем
+    body.querySelectorAll('input, select').forEach(el => {
+      el.addEventListener('input', onItemFieldChange);
+    });
+    // Кнопки удаления
+    body.querySelectorAll('.row-del').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const row = e.target.closest('.prop-items-row');
+        const idx = parseInt(row.dataset.idx, 10);
+        proposalForm.items.splice(idx, 1);
+        renderProposalItems();
+      });
+    });
+
+    updateTotals();
+  }
+
+  function onItemFieldChange(e) {
+    const row = e.target.closest('.prop-items-row');
+    const idx = parseInt(row.dataset.idx, 10);
+    const field = e.target.dataset.field;
+    let value = e.target.value;
+    if (field === 'quantity' || field === 'price') {
+      value = Number(value) || 0;
+    }
+
+    // Если поменялось имя — проверяем, не выбрана ли позиция из каталога (datalist)
+    if (field === 'name' && catalog.loaded) {
+      // Ищем в catalog позицию, label которой совпадает с введённым value
+      // (label = "Категория — Наименование")
+      let matched = null;
+      let matchedCat = null;
+      for (const cat of catalog.categories) {
+        for (const item of cat.items) {
+          const label = cat.name + ' — ' + item.name;
+          if (label === value) { matched = item; matchedCat = cat; break; }
+        }
+        if (matched) break;
+      }
+      if (matched) {
+        // Подставляем чистое имя + остальные поля из каталога
+        proposalForm.items[idx].catalog_item_id = matched.id;
+        proposalForm.items[idx].name = matched.name;
+        proposalForm.items[idx].unit = matched.unit || '';
+        proposalForm.items[idx].price = Number(matched.price || 0);
+        proposalForm.items[idx].vat_rate = matched.vat_rate || 'no_vat';
+        // Перерисовываем строки чтобы обновить значения в инпутах
+        renderProposalItems();
+        return;
+      }
+      // Если не совпало с каталогом — это произвольная позиция
+      proposalForm.items[idx].catalog_item_id = null;
+    }
+
+    proposalForm.items[idx][field] = value;
+    // Пересчитываем — только эту строку и общие итоги (без перерисовки таблицы → фокус остаётся)
+    updateRowCalcs(idx);
+    updateTotals();
+  }
+
+  // Привязка кнопки добавления — одна, без dropdown.
+  // Добавляет пустую строку, продавец печатает в наименовании и выбирает из datalist
+  // (или просто пишет произвольное название).
+  document.getElementById('prop-btn-add').addEventListener('click', () => {
+    proposalForm.items.push({
+      catalog_item_id: null,
+      name: '',
+      unit: '',
+      quantity: 1,
+      price: 0,
+      vat_rate: 'no_vat'
+    });
+    renderProposalItems();
+    // Сфокусируемся на новой строке
+    setTimeout(() => {
+      const rows = document.querySelectorAll('#prop-items-body .prop-items-row');
+      if (rows.length) {
+        const lastInput = rows[rows.length - 1].querySelector('input[data-field="name"]');
+        if (lastInput) lastInput.focus();
+      }
+    }, 50);
+  });
+
+  // ==================== СОХРАНЕНИЕ КП ====================
+  // Создаёт запись в proposals + N записей в proposal_items.
+  // status = 'draft' для черновика, 'sent' для отправки.
+
+  function validateProposal() {
+    if (!proposalForm.deal || !proposalForm.deal.id) {
+      return 'Не определена сделка';
+    }
+    if (proposalForm.items.length === 0) {
+      return 'Добавьте хотя бы одну позицию';
+    }
+    for (let i = 0; i < proposalForm.items.length; i++) {
+      const it = proposalForm.items[i];
+      if (!it.name || String(it.name).trim().length === 0) {
+        return 'Не заполнено наименование в строке ' + (i + 1);
+      }
+      if (Number(it.quantity) <= 0) {
+        return 'Количество должно быть больше 0 (строка ' + (i + 1) + ')';
+      }
+    }
+    return null; // ок
+  }
+
+  async function saveProposal(statusValue) {
+    const errMsg = validateProposal();
+    if (errMsg) {
+      showToast(errMsg, true);
+      return;
+    }
+
+    // Блокируем кнопки чтобы избежать двойного клика
+    const btnDraft = document.getElementById('prop-btn-save-draft');
+    const btnSend = document.getElementById('prop-btn-save-send');
+    btnDraft.disabled = true;
+    btnSend.disabled = true;
+    setSync('syncing', 'Сохраняем КП...');
+
+    try {
+      // Итоги
+      const totals = calcTotals(proposalForm.items);
+
+      const isEdit = !!proposalForm.editingId;
+      let proposalId;
+
+      const payload = {
+        deal_id: proposalForm.deal.id,
+        date: document.getElementById('prop-date').value || null,
+        valid_until: document.getElementById('prop-valid-until').value || null,
+        comment: document.getElementById('prop-comment').value || '',
+        status: statusValue,
+        total_amount: round2(totals.total),
+        total_vat: round2(totals.total_vat),
+        total_no_vat: round2(totals.total_no_vat),
+        seller_id: (currentUser && currentUser.id) || null
+      };
+
+      if (isEdit) {
+        // 1a) PUT обновления записи КП
+        proposalId = proposalForm.editingId;
+        // Получим текущую запись, чтобы PUT не затёр служебные поля (created_at, parent_id и т.п.)
+        const existing = await rest('GET', '/records/proposals/' + proposalId);
+        const merged = Object.assign({}, existing, payload);
+        delete merged.id;
+        await rest('PUT', '/records/proposals/' + proposalId, merged);
+
+        // 2a) Удаляем старые позиции
+        const oldItemsResp = await rest('GET', '/records/proposal_items', null, {
+          filter: 'proposal_id,eq,' + proposalId,
+          size: 500
+        });
+        const oldItems = (oldItemsResp && oldItemsResp.records) || [];
+        if (oldItems.length > 0) {
+          await Promise.all(oldItems.map(it =>
+            rest('DELETE', '/records/proposal_items/' + it.id)
+          ));
+        }
+      } else {
+        // 1b) POST нового КП
+        const newId = await rest('POST', '/records/proposals', payload);
+        proposalId = (typeof newId === 'number' || typeof newId === 'string')
+          ? Number(newId)
+          : (newId && newId.id ? Number(newId.id) : null);
+        if (!proposalId) throw new Error('Не удалось получить id нового КП');
+      }
+
+      // 3) Создаём (новые) позиции — параллельно
+      const itemPosts = proposalForm.items.map((it, idx) => {
+        const r = calcRow(it);
+        return rest('POST', '/records/proposal_items', {
+          proposal_id: proposalId,
+          position: idx + 1,
+          catalog_item_id: it.catalog_item_id || null,
+          name: it.name,
+          unit: it.unit || '',
+          quantity: Number(it.quantity) || 0,
+          price: round2(it.price),
+          vat_rate: it.vat_rate || 'no_vat',
+          amount: round2(r.amount),
+          vat_amount: round2(r.vat_amount)
+        });
+      });
+      await Promise.all(itemPosts);
+
+      // Если КП ОТПРАВЛЕНО (sent) И это НЕ редактирование уже sent-КП —
+      // добавляем запись в историю касаний и переводим статус сделки.
+      // То есть: новое КП-sent, или draft→sent при редактировании.
+      const wasAlreadySent = proposalForm.originalStatus === 'sent';
+      if (statusValue === 'sent' && !wasAlreadySent) {
+        await postProposalActivity(proposalForm.deal, proposalId, totals.total);
+        await maybeAdvanceDealStatus(proposalForm.deal);
+      }
+
+      setSync('ok', isEdit ? 'КП обновлено' : 'КП сохранено');
+      showToast('КП №' + proposalId + (isEdit ? ' обновлено' : ' сохранено'));
+
+      // Закрываем модалку, обновляем список КП и историю в карточке сделки
+      closeProposalForm();
+      if (currentModalDeal && currentModalDeal.id === proposalForm.deal.id) {
+        loadProposalsForCurrentDeal(currentModalDeal.id);
+        loadActivityForCurrentDeal(currentModalDeal.id);
+      }
+    } catch (e) {
+      setSync('error', 'Ошибка сохранения: ' + e.message);
+      showToast('Ошибка: ' + e.message, true);
+      console.error(e);
+    } finally {
+      btnDraft.disabled = false;
+      btnSend.disabled = false;
+    }
+  }
+
+  // Округление до 2 знаков после запятой — для денежных полей в БД
+  function round2(n) {
+    return Math.round((Number(n) || 0) * 100) / 100;
+  }
+
+  // ==================== ИНТЕГРАЦИЯ КП → СДЕЛКА ====================
+  // При отправке КП:
+  //   1) пишем запись в activity (тип 'proposal'), чтобы продавец видел в истории
+  //   2) если сделка ещё в ранних статусах воронки — переводим в «КП отправлено»
+
+  // Статусы, после которых уже не имеет смысла откатывать назад в «КП отправлено».
+  // Если сделка тут — статус не трогаем (это уже состояние «дальше по воронке»
+  // или конечное состояние, навязывать «КП отправлено» нельзя).
+  const ADVANCE_BLOCKED_STATUSES = [
+    'КП отправлено',     // уже там
+    'Счёт выставлен',
+    'Оплачено',
+    'Отказ',
+    'Не сейчас'
+  ];
+
+  async function postProposalActivity(deal, proposalId, totalAmount) {
+    const summary = 'Отправлено КП №' + proposalId
+      + ' на сумму ' + Number(totalAmount).toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₽';
+    try {
+      await rest('POST', '/records/activity', {
+        deal_id: Number(deal.id),
+        created_at: toMysqlDateTime(new Date().toISOString()),
+        seller_id: (currentUser && currentUser.id) || null,
+        type: 'proposal',
+        summary: summary,
+        status_after: '',
+        temperature_after: '',
+        next_step: '',
+        next_date: null
+      });
+    } catch (e) {
+      console.warn('Не удалось записать activity для КП:', e.message);
+    }
+  }
+
+  async function maybeAdvanceDealStatus(deal) {
+    if (!deal || !deal.id) return;
+    if (ADVANCE_BLOCKED_STATUSES.indexOf(deal.status) >= 0) return;
+    const dealId = Number(deal.id);
+    // Переводим в «КП отправлено» через PUT (как везде в коде — PATCH глючит)
+    try {
+      const existing = await rest('GET', '/records/deals/' + dealId);
+      const merged = Object.assign({}, existing, {
+        status: 'КП отправлено',
+        updated_at: toMysqlDateTime(new Date().toISOString())
+      });
+      delete merged.id;
+      await rest('PUT', '/records/deals/' + dealId, merged);
+      // Обновим локальный объект чтобы UI отражал
+      deal.status = 'КП отправлено';
+      // Также обновим в глобальном массиве deals и перерисуем
+      const dealInList = deals.find(d => Number(d.id) === dealId);
+      if (dealInList) {
+        dealInList.status = 'КП отправлено';
+        dealInList.updated_at = merged.updated_at;
+      }
+      if (currentModalDeal && Number(currentModalDeal.id) === dealId) {
+        currentModalDeal.status = 'КП отправлено';
+        renderModalView(currentModalDeal);
+      }
+      render();
+    } catch (e) {
+      console.warn('Не удалось обновить статус сделки на «КП отправлено»:', e.message);
+    }
+  }
+
+  document.getElementById('prop-btn-save-draft').addEventListener('click', () => saveProposal('draft'));
+  document.getElementById('prop-btn-save-send').addEventListener('click', () => saveProposal('sent'));
+  document.getElementById('prop-btn-cancel').addEventListener('click', closeProposalForm);
+  document.getElementById('proposal-modal-close').addEventListener('click', closeProposalForm);
+
   document.getElementById('modal-close').addEventListener('click', () => closeDetailModal());
   // Клик по фону НЕ закрывает модалку — только крестик и кнопки.
   // Это защищает от потери введённых данных при случайном клике рядом с формой.
 
   // Кнопка «+ Новая сделка» в шапке
   document.getElementById('btn-new-deal').addEventListener('click', openNewDeal);
+
+  // ==================== NEW LEAD MODAL ====================
+  // Упрощённая модалка для быстрого добавления лида.
+  // Поля: источник, имя, телефон/email, контакт, тип, заметка.
+  // Создаётся deal со статусом «Лид», без касания (нет ещё разговора).
+
+  function openNewLeadModal() {
+    // Сброс полей
+    ['lead-source', 'lead-client_name', 'lead-phone', 'lead-email',
+     'lead-contact_name', 'lead-type', 'lead-note'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('lead-modal').classList.add('show');
+    document.getElementById('lead-modal').scrollTop = 0;
+    setTimeout(() => document.getElementById('lead-source').focus(), 100);
+  }
+
+  function closeNewLeadModal() {
+    document.getElementById('lead-modal').classList.remove('show');
+  }
+
+  async function saveNewLead() {
+    const source = document.getElementById('lead-source').value;
+    if (!source) {
+      showToast('Выберите источник лида', true);
+      return;
+    }
+    const clientName = document.getElementById('lead-client_name').value.trim();
+    const phone = document.getElementById('lead-phone').value.trim();
+    const email = document.getElementById('lead-email').value.trim();
+    if (!clientName && !phone && !email) {
+      showToast('Заполните хотя бы название, телефон или email', true);
+      return;
+    }
+    const note = document.getElementById('lead-note').value.trim();
+
+    const btnSave = document.getElementById('lead-btn-save');
+    btnSave.disabled = true;
+    setSync('syncing', 'Сохраняем лид...');
+
+    try {
+      const nowMysql = toMysqlDateTime(new Date().toISOString());
+      const dealPayload = {
+        client_name: clientName || '(без названия)',
+        phone: phone || null,
+        email: email || null,
+        contact_name: document.getElementById('lead-contact_name').value.trim() || null,
+        type: document.getElementById('lead-type').value || null,
+        source: source,
+        status: LEAD_STATUS,
+        seller_id: (currentUser && currentUser.id) || null,
+        created_at: nowMysql,
+        updated_at: nowMysql,
+        contact_is_dm: 0,
+        can_reanimate: 0
+      };
+      // serializeDeal заменит пустые строки на null, но мы и так аккуратно подготовили
+      const created = await rest('POST', '/records/deals', dealPayload);
+      const newId = (typeof created === 'number' || typeof created === 'string')
+        ? Number(created)
+        : (created && created.id ? Number(created.id) : null);
+
+      // Заметка → в activity типа 'note'
+      if (note && newId) {
+        try {
+          await rest('POST', '/records/activity', {
+            deal_id: newId,
+            created_at: nowMysql,
+            seller_id: (currentUser && currentUser.id) || null,
+            type: 'note',
+            summary: note,
+            status_after: LEAD_STATUS,
+            temperature_after: '',
+            next_step: '',
+            next_date: null
+          });
+        } catch (e) { console.warn('activity для лида не записалась:', e.message); }
+      }
+
+      // Подгружаем свежие данные
+      const fresh = await rest('GET', '/records/deals/' + newId);
+      fresh.needs = parseNeeds(fresh.needs);
+      normalizeDeal(fresh);
+      deals.unshift(fresh);
+
+      setSync('ok', 'Лид сохранён');
+      showToast('Лид №' + newId + ' сохранён');
+      closeNewLeadModal();
+      // Переключаемся на таб «Лиды» чтобы продавец увидел результат
+      const leadTab = document.querySelector('[data-tab="leads"]');
+      if (leadTab) leadTab.click();
+      render();
+    } catch (e) {
+      setSync('error', 'Ошибка: ' + e.message);
+      showToast('Ошибка сохранения: ' + e.message, true);
+      console.error(e);
+    } finally {
+      btnSave.disabled = false;
+    }
+  }
+
+  document.getElementById('btn-new-lead').addEventListener('click', openNewLeadModal);
+  document.getElementById('lead-modal-close').addEventListener('click', closeNewLeadModal);
+  document.getElementById('lead-btn-cancel').addEventListener('click', closeNewLeadModal);
+  document.getElementById('lead-btn-save').addEventListener('click', saveNewLead);
+
+  // ==================== ACCEPT LEAD (Принять в работу) ====================
+  // Переводит лид в статус «Первичный контакт» — становится сделкой.
+  // Вызывается из карточки сделки если status === 'Лид'.
+
+  async function acceptLead(dealId) {
+    const ok = confirm('Принять этот лид в работу? Статус изменится на «Первичный контакт», лид станет сделкой.');
+    if (!ok) return;
+    setSync('syncing', 'Принимаем в работу...');
+    try {
+      const existing = await rest('GET', '/records/deals/' + Number(dealId));
+      const merged = Object.assign({}, existing, {
+        status: 'Первичный контакт',
+        updated_at: toMysqlDateTime(new Date().toISOString())
+      });
+      delete merged.id;
+      await rest('PUT', '/records/deals/' + Number(dealId), merged);
+      // Локальное обновление
+      const local = deals.find(x => Number(x.id) === Number(dealId));
+      if (local) {
+        local.status = 'Первичный контакт';
+        local.updated_at = merged.updated_at;
+      }
+      if (currentModalDeal && Number(currentModalDeal.id) === Number(dealId)) {
+        currentModalDeal.status = 'Первичный контакт';
+        renderModalView(currentModalDeal);
+      }
+      render();
+      setSync('ok', 'Принято в работу');
+      showToast('Лид переведён в «Первичный контакт»');
+    } catch (e) {
+      setSync('error', 'Ошибка: ' + e.message);
+      showToast('Не удалось принять в работу: ' + e.message, true);
+    }
+  }
 
   updateChecklistStatus();
 </script>
