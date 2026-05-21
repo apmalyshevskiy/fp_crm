@@ -80,7 +80,7 @@
   .field-hint { font-size: 12px; color: var(--text-tertiary); margin-top: 4px; }
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   @media (max-width: 600px) { .row { grid-template-columns: 1fr; } }
-  input[type="text"], input[type="tel"], input[type="email"], input[type="number"], input[type="date"], input[type="datetime-local"], select, textarea {
+  input[type="text"], input[type="number"], input[type="date"], input[type="datetime-local"], select, textarea {
     width: 100%; padding: 8px 10px; border: 0.5px solid var(--border);
     border-radius: var(--radius); font-size: 14px; font-family: inherit;
     background: var(--bg); color: var(--text);
@@ -259,24 +259,6 @@
   }
   .toast.show { opacity: 1; }
   .toast.error { background: var(--danger); }
-  /* Модалка-диалог (подтверждение / ввод) */
-  .dialog-card {
-    max-width: 440px; width: 100%; padding: 1.5rem;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.18);
-    animation: dialogIn 0.14s ease-out;
-  }
-  @keyframes dialogIn {
-    from { opacity: 0; transform: translateY(-8px) scale(0.98); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
-  }
-  .dialog-title { font-size: 16px; font-weight: 500; margin-bottom: 8px; }
-  .dialog-message {
-    font-size: 14px; color: var(--text-secondary);
-    line-height: 1.5; margin-bottom: 1rem; white-space: pre-line;
-  }
-  .dialog-input-wrap { margin-bottom: 1rem; }
-  .dialog-input-hint { font-size: 12px; color: var(--text-tertiary); margin-top: 6px; }
-  .dialog-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
   .timeline { border-left: 2px solid var(--border); padding-left: 16px; margin: 12px 0 0 8px; }
   .timeline-item { position: relative; padding-bottom: 14px; }
   .timeline-item::before {
@@ -531,6 +513,9 @@
   }
   .kanban-card-date { color: var(--text-secondary); white-space: nowrap; }
   .kanban-card-date.overdue { color: var(--danger); font-weight: 500; }
+  .kanban-card[draggable="true"] { cursor: grab; }
+  .kanban-card.dragging { opacity: 0.35; cursor: grabbing; }
+  .kanban-col.drag-over { background: var(--bg-tertiary); outline: 2px dashed var(--border-strong); }
   .kanban-card-revenue {
     font-size: 11px; color: var(--text-secondary);
     margin-top: 2px;
@@ -707,14 +692,14 @@
         </div>
         <div class="field">
           <label>Телефон</label>
-          <input type="tel" id="f-phone" inputmode="tel" autocomplete="tel" placeholder="+7 (999) 123-45-67">
+          <input type="text" id="f-phone" placeholder="+7...">
         </div>
       </div>
 
       <div class="row">
         <div class="field">
           <label>Email</label>
-          <input type="email" id="f-email" inputmode="email" autocomplete="email" placeholder="name@example.com">
+          <input type="text" id="f-email" inputmode="email" placeholder="name@example.com">
         </div>
         <div class="field">
           <label>Контактное лицо</label>
@@ -1075,11 +1060,11 @@
     <div class="row">
       <div class="field">
         <label>Телефон</label>
-        <input type="tel" id="lead-phone" inputmode="tel" autocomplete="tel" placeholder="+7 (999) 123-45-67">
+        <input type="tel" id="lead-phone" placeholder="+7 ...">
       </div>
       <div class="field">
         <label>Email</label>
-        <input type="email" id="lead-email" inputmode="email" autocomplete="email" placeholder="info@example.com">
+        <input type="text" id="lead-email" inputmode="email" placeholder="info@example.com">
       </div>
     </div>
 
@@ -1132,31 +1117,31 @@
   </div>
 </div>
 
-<!-- ==================== DIALOG MODAL (подтверждение / ввод) ==================== -->
-<!-- Универсальная модалка: используется как confirm и как prompt.
-     Управляется функцией showDialog() — см. скрипт ниже. -->
-<div class="modal-bg" id="dialog-modal">
-  <div class="modal dialog-card" id="dialog-card">
-    <div class="dialog-title" id="dialog-title">—</div>
-    <div class="dialog-message" id="dialog-message"></div>
-    <div class="dialog-input-wrap" id="dialog-input-wrap" style="display:none">
-      <div class="field" id="dialog-type-field" style="display:none;margin-bottom:12px">
-        <label>Тип касания</label>
-        <select id="dialog-type">
-          <option value="call">Звонок</option>
-          <option value="meeting">Встреча</option>
-          <option value="demo">Демо</option>
-          <option value="proposal">Отправка КП</option>
-          <option value="invoice">Выставлен счёт</option>
-          <option value="note">Заметка</option>
-        </select>
-      </div>
-      <textarea id="dialog-input" rows="3"></textarea>
-      <div class="dialog-input-hint" id="dialog-input-hint"></div>
+<!-- ==================== KANBAN MOVE MODAL ==================== -->
+<div class="modal-bg" id="kanban-move-modal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <div class="modal-title" id="kanban-move-title">Перенос карточки</div>
+      <button class="close-btn" id="kanban-move-close">×</button>
     </div>
-    <div class="dialog-actions">
-      <button id="dialog-cancel">Отмена</button>
-      <button id="dialog-confirm" class="primary">OK</button>
+    <div class="field">
+      <label>Тип касания</label>
+      <select id="kanban-move-type">
+        <option value="call">Звонок</option>
+        <option value="meeting">Встреча</option>
+        <option value="demo">Демо</option>
+        <option value="proposal">Отправка КП</option>
+        <option value="invoice">Выставлен счёт</option>
+        <option value="note">Заметка</option>
+      </select>
+    </div>
+    <div class="field" style="margin-top:10px">
+      <label>Резюме разговора <span style="color:var(--danger)">*</span></label>
+      <textarea id="kanban-move-summary" rows="3" placeholder="Что обсудили, итог..."></textarea>
+    </div>
+    <div class="actions" style="margin-top:14px">
+      <button id="kanban-move-save" class="primary">Сохранить</button>
+      <button id="kanban-move-cancel">Отмена</button>
     </div>
   </div>
 </div>
@@ -1498,11 +1483,9 @@
 
       out[k] = v;
     });
-    // Колонок activity_type/activity_summary в deals нет — отрезаем.
-    // skip_activity — служебный флаг (управляет созданием касания), не колонка.
+    // Колонок activity_type/activity_summary в deals нет — отрезаем
     delete out.activity_type;
     delete out.activity_summary;
-    delete out.skip_activity;
     return out;
   }
 
@@ -1618,27 +1601,22 @@
       }
 
       // Activity — отдельная запись на каждое касание.
-      // Если фронт прислал skip_activity (резюме пустое и продавец отказался
-      // от касания) — карточку сохраняем, но касание не создаём.
-      let activityId = null;
-      if (!body.skip_activity) {
-        // id больше не задаём — БД сама. Получаем id из ответа для связи с pain_quotes.
-        const activityPayload = {
-          deal_id: dealId,
-          created_at: nowMysql,
-          seller_id: body.seller_id || null,
-          type: body.activity_type || 'call',
-          summary: body.activity_summary || '',
-          status_after: body.status || '',
-          temperature_after: body.temperature || '',
-          next_step: body.next_step || '',
-          next_date: body.next_date ? toMysqlDateTime(body.next_date) : null
-        };
-        const createdActivity = await rest('POST', '/records/activity', activityPayload);
-        activityId = (typeof createdActivity === 'number' || typeof createdActivity === 'string')
-          ? Number(createdActivity)
-          : (createdActivity && createdActivity.id ? Number(createdActivity.id) : null);
-      }
+      // id больше не задаём — БД сама. Получаем id из ответа для связи с pain_quotes.
+      const activityPayload = {
+        deal_id: dealId,
+        created_at: nowMysql,
+        seller_id: body.seller_id || null,
+        type: body.activity_type || 'call',
+        summary: body.activity_summary || '',
+        status_after: body.status || '',
+        temperature_after: body.temperature || '',
+        next_step: body.next_step || '',
+        next_date: body.next_date ? toMysqlDateTime(body.next_date) : null
+      };
+      const createdActivity = await rest('POST', '/records/activity', activityPayload);
+      const activityId = (typeof createdActivity === 'number' || typeof createdActivity === 'string')
+        ? Number(createdActivity)
+        : (createdActivity && createdActivity.id ? Number(createdActivity.id) : null);
 
       // Pain quote — каждое касание может добавить новую цитату
       const painText = String(body.pain_quote || '').trim();
@@ -1771,85 +1749,6 @@
     t.textContent = msg;
     t.className = 'toast show' + (isError ? ' error' : '');
     setTimeout(() => t.className = 'toast' + (isError ? ' error' : ''), 2800);
-  }
-
-  // ============================================================
-  // DIALOG — модалка-замена confirm() и prompt()
-  // ============================================================
-  // Возвращает Promise:
-  //   - режим confirm: resolve(true) при OK, resolve(false) при отмене
-  //   - режим prompt:  resolve(строка) при OK, resolve(null) при отмене
-  // opts: { title, message, confirmText, cancelText,
-  //         input: false|true, inputValue, inputHint, inputPlaceholder }
-  // opts (доп.): type: false|true — показать селектор типа касания;
-  //              typeValue — начальное значение типа.
-  // Если type:true, в режиме input резолвится объект { text, type }.
-  function showDialog(opts) {
-    return new Promise(resolve => {
-      const o = opts || {};
-      const modal = document.getElementById('dialog-modal');
-      const titleEl = document.getElementById('dialog-title');
-      const msgEl = document.getElementById('dialog-message');
-      const wrap = document.getElementById('dialog-input-wrap');
-      const input = document.getElementById('dialog-input');
-      const hint = document.getElementById('dialog-input-hint');
-      const typeField = document.getElementById('dialog-type-field');
-      const typeSelect = document.getElementById('dialog-type');
-      const btnOk = document.getElementById('dialog-confirm');
-      const btnCancel = document.getElementById('dialog-cancel');
-
-      titleEl.textContent = o.title || 'Подтверждение';
-      msgEl.textContent = o.message || '';
-      msgEl.style.display = o.message ? 'block' : 'none';
-      btnOk.textContent = o.confirmText || 'OK';
-      btnCancel.textContent = o.cancelText || 'Отмена';
-
-      const isInput = !!o.input;
-      const withType = isInput && !!o.type;
-      wrap.style.display = isInput ? 'block' : 'none';
-      typeField.style.display = withType ? 'block' : 'none';
-      if (isInput) {
-        input.value = o.inputValue || '';
-        input.placeholder = o.inputPlaceholder || '';
-        hint.textContent = o.inputHint || '';
-        hint.style.display = o.inputHint ? 'block' : 'none';
-        if (withType) typeSelect.value = o.typeValue || 'call';
-      }
-
-      function cleanup() {
-        modal.classList.remove('show');
-        btnOk.removeEventListener('click', onOk);
-        btnCancel.removeEventListener('click', onCancel);
-        document.removeEventListener('keydown', onKey);
-      }
-      function onOk() {
-        let val;
-        if (isInput) {
-          val = withType ? { text: input.value, type: typeSelect.value } : input.value;
-        } else {
-          val = true;
-        }
-        cleanup();
-        resolve(isInput ? val : true);
-      }
-      function onCancel() {
-        cleanup();
-        resolve(isInput ? null : false);
-      }
-      function onKey(e) {
-        if (e.key === 'Escape') onCancel();
-        // Enter подтверждает — но не в textarea (там Enter = перенос строки)
-        if (e.key === 'Enter' && !isInput) onOk();
-      }
-
-      btnOk.addEventListener('click', onOk);
-      btnCancel.addEventListener('click', onCancel);
-      document.addEventListener('keydown', onKey);
-
-      modal.classList.add('show');
-      modal.scrollTop = 0;
-      setTimeout(() => (isInput ? input : btnOk).focus(), 60);
-    });
   }
 
   // ============================================================
@@ -2179,7 +2078,7 @@
     const overdue = isOverdue(d);
     const revenue = d.revenue ? Number(d.revenue).toLocaleString('ru-RU') + ' ₽/мес' : '';
     return `
-      <div class="kanban-card" data-id="${escapeHtml(d.id)}">
+      <div class="kanban-card" data-id="${escapeHtml(d.id)}" draggable="true">
         <div class="kanban-card-head">
           <div class="kanban-card-name">${escapeHtml(d.client_name || 'Без названия')}</div>
           ${tempBadgeSmall(d.temperature)}
@@ -2238,7 +2137,7 @@
         ? '<div class="kanban-empty">пусто</div>'
         : inCol.map(kanbanCard).join('');
       return `
-        <div class="kanban-col">
+        <div class="kanban-col" data-status="${escapeHtml(status)}">
           ${kanbanColumnHeader(status, inCol)}
           <div class="kanban-cards">${cardsHtml}</div>
         </div>
@@ -2788,63 +2687,127 @@
     if (card && card.dataset.id) openDetail(card.dataset.id);
   });
 
+  // ==================== KANBAN DRAG & DROP ====================
+  let dragState = null; // { dealId, fromStatus }
+  const kanbanWrap = document.getElementById('kanban-wrap');
+
+  kanbanWrap.addEventListener('dragstart', e => {
+    const card = e.target.closest('.kanban-card');
+    if (!card) return;
+    const deal = deals.find(d => String(d.id) === String(card.dataset.id));
+    dragState = {
+      dealId: card.dataset.id,
+      fromStatus: deal ? (deal.status || 'Первичный контакт') : ''
+    };
+    card.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    // dataTransfer.setData нужен для Firefox — иначе drag не стартует
+    try { e.dataTransfer.setData('text/plain', card.dataset.id); } catch (_) {}
+  });
+
+  kanbanWrap.addEventListener('dragend', () => {
+    kanbanWrap.querySelectorAll('.kanban-card.dragging').forEach(c => c.classList.remove('dragging'));
+    kanbanWrap.querySelectorAll('.kanban-col.drag-over').forEach(c => c.classList.remove('drag-over'));
+    // Сбрасываем dragState — иначе stale-состояние подсветит колонки после отменённого drop
+    dragState = null;
+  });
+
+  kanbanWrap.addEventListener('dragover', e => {
+    if (!dragState) return;
+    const col = e.target.closest('.kanban-col');
+    if (!col) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    kanbanWrap.querySelectorAll('.kanban-col.drag-over').forEach(c => c.classList.remove('drag-over'));
+    col.classList.add('drag-over');
+  });
+
+  kanbanWrap.addEventListener('dragleave', e => {
+    const col = e.target.closest('.kanban-col');
+    if (col && !col.contains(e.relatedTarget)) col.classList.remove('drag-over');
+  });
+
+  kanbanWrap.addEventListener('drop', e => {
+    e.preventDefault();
+    const col = e.target.closest('.kanban-col');
+    if (!col || !dragState) { dragState = null; return; }
+    col.classList.remove('drag-over');
+    const newStatus = col.dataset.status;
+    if (!newStatus || newStatus === dragState.fromStatus) { dragState = null; return; }
+    openKanbanMoveModal(dragState.dealId, newStatus);
+    dragState = null;
+  });
+
+  // Mini-modal
+  let kanbanMovePending = null; // { dealId, newStatus }
+
+  function openKanbanMoveModal(dealId, newStatus) {
+    kanbanMovePending = { dealId, newStatus };
+    document.getElementById('kanban-move-title').textContent = 'Перенос в «' + newStatus + '»';
+    document.getElementById('kanban-move-type').value = 'call';
+    document.getElementById('kanban-move-summary').value = '';
+    document.getElementById('kanban-move-modal').classList.add('show');
+    setTimeout(() => document.getElementById('kanban-move-summary').focus(), 50);
+  }
+
+  function closeKanbanMoveModal() {
+    document.getElementById('kanban-move-modal').classList.remove('show');
+    kanbanMovePending = null;
+  }
+
+  document.getElementById('kanban-move-close').addEventListener('click', closeKanbanMoveModal);
+  document.getElementById('kanban-move-cancel').addEventListener('click', closeKanbanMoveModal);
+
+  document.getElementById('kanban-move-save').addEventListener('click', async () => {
+    if (!kanbanMovePending) return;
+    const actType = document.getElementById('kanban-move-type').value;
+    const actSummary = document.getElementById('kanban-move-summary').value.trim();
+    if (!actSummary) {
+      showToast('Заполните резюме разговора', true);
+      document.getElementById('kanban-move-summary').focus();
+      return;
+    }
+    const { dealId, newStatus } = kanbanMovePending;
+    closeKanbanMoveModal();
+    setSync('syncing', 'Сохраняем...');
+    try {
+      const now = new Date();
+      const nowMysql = toMysqlDateTime(now.toISOString());
+      const existing = await rest('GET', '/records/deals/' + dealId);
+      const merged = Object.assign({}, existing, { status: newStatus, updated_at: nowMysql });
+      delete merged.id;
+      await rest('PUT', '/records/deals/' + dealId, merged);
+      await rest('POST', '/records/activity', {
+        deal_id: Number(dealId),
+        created_at: nowMysql,
+        seller_id: currentUser ? currentUser.id : null,
+        type: actType,
+        summary: actSummary,
+        status_after: newStatus,
+        temperature_after: existing.temperature || '',
+        next_step: existing.next_step || '',
+        next_date: existing.next_date ? toMysqlDateTime(existing.next_date) : null
+      });
+      const fresh = await rest('GET', '/records/deals/' + dealId);
+      fresh.needs = parseNeeds(fresh.needs);
+      mergeDealLocal(fresh);
+      renderKanban();
+      setSync('ok', 'Сохранено');
+      showToast('Сохранено');
+    } catch (err) {
+      setSync('error', 'Ошибка: ' + err.message);
+      showToast('Ошибка: ' + err.message, true);
+    }
+  });
+
   document.getElementById('btn-save').addEventListener('click', async () => {
     const data = readForm();
     if (!data.client_name) {
       showToast('Укажите хотя бы название клиента', true);
       return;
     }
-    if (!isValidEmail(data.email)) {
-      markEmailField(document.getElementById('f-email'), false);
-      showToast('Проверьте email — формат неверный', true);
-      return;
-    }
-    // Касание формируется только если есть резюме разговора.
-    // Если резюме пустое — спрашиваем, нужно ли вообще касание.
-    const summary = (data.activity_summary || '').trim();
-    if (summary.length < 3) {
-      const wantActivity = await showDialog({
-        title: 'Резюме разговора пустое',
-        message: 'Добавить касание в историю или сохранить карточку без него?',
-        confirmText: 'Добавить касание',
-        cancelText: 'Сохранить без касания'
-      });
-      if (wantActivity) {
-        // Пользователь хочет касание — просим заполнить резюме и выбрать тип.
-        // Прочерк больше не подставляем: пустое касание сохранять нельзя.
-        let entered = '';
-        let chosenType = data.activity_type || 'call';
-        let hint = '';
-        while (true) {
-          const res = await showDialog({
-            title: 'Опишите касание',
-            message: 'Выберите тип и коротко опишите, что произошло в этот раз.',
-            confirmText: 'Сохранить',
-            cancelText: 'Отмена',
-            input: true,
-            type: true,
-            typeValue: chosenType,
-            inputValue: entered,
-            inputPlaceholder: 'Например: перезвонил, договорились о демо',
-            inputHint: hint
-          });
-          if (res === null) return; // отказался — прерываем сохранение
-          entered = (res.text || '').trim();
-          chosenType = res.type || 'call';
-          if (entered) break; // есть текст — выходим из цикла
-          hint = 'Поле не может быть пустым — опишите касание.';
-        }
-        data.activity_summary = entered;
-        data.activity_type = chosenType;
-        // обновим поля в форме, чтобы пользователь видел, что ушло
-        const ta = document.getElementById('f-activity_summary');
-        if (ta) ta.value = entered;
-        const ts = document.getElementById('f-activity_type');
-        if (ts) ts.value = chosenType;
-      } else {
-        // Касание не нужно — помечаем, сервер пропустит создание activity
-        data.skip_activity = true;
-      }
+    if (!data.activity_summary || data.activity_summary.trim().length < 3) {
+      if (!confirm('Резюме разговора пустое. Точно сохранить?')) return;
     }
     setSync('syncing', 'Сохраняем...');
     try {
@@ -3302,7 +3265,7 @@
 <body>
 
 <div class="head">
-  <div class="brand">Ф-Трейд</div>
+  <div class="brand">FUSIONPOS</div>
   <div class="seller">
     <div><strong>${escapeHtml(sellerName)}</strong></div>
     ${sellerPhone ? '<div>Тел.: ' + escapeHtml(sellerPhone) + '</div>' : ''}
@@ -3349,6 +3312,7 @@ ${proposal.comment ? '<div class="comment">' + escapeHtml(proposal.comment) + '<
   <div>
     <div style="margin-bottom: 4px"><strong>С уважением,</strong></div>
     <div>${escapeHtml(sellerName)}</div>
+    <div style="color:#666;font-size:12px;margin-top: 2px">FUSIONPOS</div>
   </div>
   <div class="signature">подпись / печать</div>
 </div>
@@ -3920,11 +3884,6 @@ ${proposal.comment ? '<div class="comment">' + escapeHtml(proposal.comment) + '<
       showToast('Заполните хотя бы название, телефон или email', true);
       return;
     }
-    if (!isValidEmail(email)) {
-      markEmailField(document.getElementById('lead-email'), false);
-      showToast('Проверьте email — формат неверный', true);
-      return;
-    }
     const note = document.getElementById('lead-note').value.trim();
 
     const btnSave = document.getElementById('lead-btn-save');
@@ -3996,79 +3955,6 @@ ${proposal.comment ? '<div class="comment">' + escapeHtml(proposal.comment) + '<
   document.getElementById('lead-modal-close').addEventListener('click', closeNewLeadModal);
   document.getElementById('lead-btn-cancel').addEventListener('click', closeNewLeadModal);
   document.getElementById('lead-btn-save').addEventListener('click', saveNewLead);
-
-  // ==================== ВАЛИДАЦИЯ EMAIL ====================
-  // Простая, но надёжная проверка: есть имя, @, домен с точкой.
-  // Пустое значение считается валидным — email необязателен.
-  function isValidEmail(value) {
-    const v = (value || '').trim();
-    if (!v) return true;
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-  }
-
-  // Подсветка поля email при ошибке + сообщение под полем.
-  function markEmailField(input, valid) {
-    if (!input) return;
-    input.style.borderColor = valid ? '' : 'var(--danger)';
-    input.style.boxShadow = valid ? '' : '0 0 0 2px rgba(163,45,45,0.12)';
-  }
-
-  // Навешиваем мягкую проверку на оба поля email — снимаем подсветку, как только исправят.
-  (function attachEmailValidation() {
-    ['lead-email', 'f-email'].forEach(id => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.addEventListener('input', () => {
-        if (isValidEmail(el.value)) markEmailField(el, true);
-      });
-      el.addEventListener('blur', () => {
-        markEmailField(el, isValidEmail(el.value));
-      });
-    });
-  })();
-
-  // ==================== ФОРМАТИРОВАНИЕ ТЕЛЕФОНА ====================
-  // Приводит ввод к виду +7 (999) 123-45-67 по мере набора.
-  // Российские номера (11 цифр с 7/8, или 10 цифр) форматируются красиво.
-  // Нестандартный / международный ввод не ломается — остаётся как есть.
-  function formatRuPhone(raw) {
-    let digits = (raw || '').replace(/\D/g, '');
-    if (!digits) return '';
-    // Ведущая 8 или 7 → нормализуем к 7
-    if (digits[0] === '8') digits = '7' + digits.slice(1);
-    if (digits[0] === '9' && digits.length <= 10) digits = '7' + digits;
-    // Только российский формат: начинается на 7 и не длиннее 11 цифр
-    if (digits[0] !== '7' || digits.length > 11) {
-      return raw.trim();
-    }
-    const d = digits.slice(1); // до 10 цифр после кода страны
-    let out = '+7';
-    if (d.length > 0) out += ' (' + d.slice(0, 3);
-    if (d.length >= 3) out += ')';
-    if (d.length > 3) out += ' ' + d.slice(3, 6);
-    if (d.length > 6) out += '-' + d.slice(6, 8);
-    if (d.length > 8) out += '-' + d.slice(8, 10);
-    return out;
-  }
-
-  (function attachPhoneFormatter() {
-    ['lead-phone', 'f-phone'].forEach(id => {
-      const phoneInput = document.getElementById(id);
-      if (!phoneInput) return;
-      phoneInput.addEventListener('input', () => {
-        const before = phoneInput.value;
-        const formatted = formatRuPhone(before);
-        if (formatted !== before) {
-          phoneInput.value = formatted;
-          // Курсор в конец — для быстрого набора этого достаточно
-          phoneInput.setSelectionRange(formatted.length, formatted.length);
-        }
-      });
-      phoneInput.addEventListener('blur', () => {
-        phoneInput.value = formatRuPhone(phoneInput.value);
-      });
-    });
-  })();
 
   // ==================== ACCEPT LEAD (Принять в работу) ====================
   // Переводит лид в статус «Первичный контакт» — становится сделкой.
