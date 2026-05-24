@@ -1201,9 +1201,8 @@
 
     <!-- Итоги — будут считаться на шаге 6 -->
     <div class="prop-totals" id="prop-totals">
-      <div class="row"><span class="lbl">Без НДС:</span><span class="val" id="prop-total-no-vat">0 ₽</span></div>
-      <div class="row"><span class="lbl">В т.ч. НДС 5%:</span><span class="val" id="prop-total-vat">0 ₽</span></div>
-      <div class="row main"><span class="lbl">Всего:</span><span class="val" id="prop-total">0 ₽</span></div>
+      <div class="row main"><span class="lbl">Всего к оплате:</span><span class="val" id="prop-total">0 ₽</span></div>
+      <div class="row"><span class="lbl">В т.ч. НДС:</span><span class="val" id="prop-total-vat">0 ₽</span></div>
     </div>
 
     <!-- Действия -->
@@ -3197,9 +3196,9 @@
 
     const total = Number(proposal.total_amount || 0);
     const totalVat = Number(proposal.total_vat || 0);
-    const totalNoVat = Number(proposal.total_no_vat || 0);
 
-    const fmt = n => Number(n || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₽';
+    const fmtNum = n => Number(n || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const fmt = n => fmtNum(n) + ' ₽';
 
     const rowsHtml = items.map((it, i) => {
       const qty = Number(it.quantity) || 0;
@@ -3208,17 +3207,17 @@
       const vat = Number(it.vat_amount) || 0;
       const isNoVat = !it.vat_rate || it.vat_rate === 'no_vat';
       const vatLabel = isNoVat ? 'Без НДС' : (it.vat_rate + '%');
-      const vatCell = isNoVat ? '—' : fmt(vat);
+      const vatCell = isNoVat ? '—' : fmtNum(vat);
       return `
         <tr>
           <td style="text-align:center">${i + 1}</td>
           <td>${escapeHtml(it.name)}</td>
           <td style="text-align:center">${escapeHtml(it.unit || '')}</td>
           <td style="text-align:right">${qty.toLocaleString('ru-RU')}</td>
-          <td style="text-align:right">${fmt(price)}</td>
+          <td style="text-align:right">${fmtNum(price)}</td>
           <td style="text-align:center">${vatLabel}</td>
           <td style="text-align:right">${vatCell}</td>
-          <td style="text-align:right;font-weight:600">${fmt(amount)}</td>
+          <td style="text-align:right;font-weight:600">${fmtNum(amount)}</td>
         </tr>
       `;
     }).join('');
@@ -3289,10 +3288,10 @@ ${proposal.comment ? '<div class="comment">' + escapeHtml(proposal.comment) + '<
       <th>Наименование</th>
       <th style="text-align:center">Ед.</th>
       <th style="text-align:right">Кол-во</th>
-      <th style="text-align:right">Цена</th>
+      <th style="text-align:right">Цена, ₽</th>
       <th style="text-align:center">Ставка НДС</th>
-      <th style="text-align:right">Сумма НДС</th>
-      <th style="text-align:right">Всего</th>
+      <th style="text-align:right">Сумма НДС, ₽</th>
+      <th style="text-align:right">Всего, ₽</th>
     </tr>
   </thead>
   <tbody>
@@ -3302,9 +3301,8 @@ ${proposal.comment ? '<div class="comment">' + escapeHtml(proposal.comment) + '<
 
 <div class="totals">
   <table>
-    <tr><td>Без НДС:</td><td>${fmt(totalNoVat)}</td></tr>
-    <tr><td>В т.ч. НДС:</td><td>${fmt(totalVat)}</td></tr>
     <tr class="main"><td>Всего к оплате:</td><td>${fmt(total)}</td></tr>
+    <tr><td>В т.ч. НДС:</td><td>${fmt(totalVat)}</td></tr>
   </table>
 </div>
 
@@ -3317,10 +3315,7 @@ ${proposal.comment ? '<div class="comment">' + escapeHtml(proposal.comment) + '<
   <div class="signature">подпись / печать</div>
 </div>
 
-<div class="notes">
-  Цены указаны с учётом НДС, где применимо. Лицензии — без НДС (российское ПО, реестр №31687).
-  ${validStr ? 'Условия КП действуют до ' + validStr + '.' : ''}
-</div>
+${validStr ? `<div class="notes">Условия КП действуют до ${validStr}.</div>` : ''}
 
 </body>
 </html>`;
@@ -3518,7 +3513,6 @@ ${proposal.comment ? '<div class="comment">' + escapeHtml(proposal.comment) + '<
 
   function updateTotals() {
     const t = calcTotals(proposalForm.items);
-    document.getElementById('prop-total-no-vat').textContent = fmtMoney(t.total_no_vat);
     document.getElementById('prop-total-vat').textContent = fmtMoney(t.total_vat);
     document.getElementById('prop-total').textContent = fmtMoney(t.total);
   }
