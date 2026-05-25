@@ -310,9 +310,24 @@
   .prop-section { margin-bottom: 1.25rem; }
   .prop-section-title {
     font-size: 13px; font-weight: 600;
-    margin-bottom: 8px; color: var(--text-secondary);
+    color: var(--text-secondary);
     text-transform: uppercase; letter-spacing: 0.5px;
   }
+  .prop-section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .prop-vat-toggle {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 12px; color: var(--text-secondary);
+    cursor: pointer; user-select: none; font-weight: 400;
+    text-transform: none; letter-spacing: 0;
+  }
+  .prop-items.vat-hidden .prop-items-head,
+  .prop-items.vat-hidden .prop-items-row {
+    grid-template-columns: 28px 1fr 72px 68px 92px 96px 28px;
+  }
+  .prop-items.vat-hidden .vat-col { display: none; }
   .prop-items {
     border: 0.5px solid var(--border); border-radius: var(--radius);
     overflow: hidden;
@@ -1195,7 +1210,12 @@
 
     <!-- Таблица позиций -->
     <div class="prop-section">
-      <div class="prop-section-title">Позиции</div>
+      <div class="prop-section-header">
+        <div class="prop-section-title">Позиции</div>
+        <label class="prop-vat-toggle">
+          <input type="checkbox" id="prop-show-vat"> Показать ставку и НДС
+        </label>
+      </div>
       <div class="prop-items" id="prop-items">
         <div class="prop-items-head">
           <div></div>
@@ -1203,8 +1223,8 @@
           <div>Ед.</div>
           <div>Кол-во</div>
           <div>Цена</div>
-          <div>Ставка</div>
-          <div>НДС</div>
+          <div class="vat-col">Ставка</div>
+          <div class="vat-col">НДС</div>
           <div>Всего</div>
           <div></div>
         </div>
@@ -3530,8 +3550,8 @@ ${validStr ? `<div class="notes">Условия КП действуют до ${v
     const amountCell = row.querySelector('[data-calc="amount"]');
     if (vatCell) vatCell.textContent = (it.vat_rate === 'no_vat' || !it.vat_rate)
       ? '—'
-      : fmtMoney(r.vat_amount);
-    if (amountCell) amountCell.textContent = fmtMoney(r.amount);
+      : (Number(r.vat_amount) || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (amountCell) amountCell.textContent = (Number(r.amount) || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   function updateTotals() {
@@ -3618,8 +3638,8 @@ ${validStr ? `<div class="notes">Условия КП действуют до ${v
     }
     body.innerHTML = proposalForm.items.map((it, i) => {
       const r = calcRow(it);
-      const vatText = (it.vat_rate === 'no_vat' || !it.vat_rate) ? '—' : fmtMoney(r.vat_amount);
-      const amountText = fmtMoney(r.amount);
+      const vatText = (it.vat_rate === 'no_vat' || !it.vat_rate) ? '—' : (Number(r.vat_amount) || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const amountText = (Number(r.amount) || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       return `
       <div class="prop-items-row" data-idx="${i}">
         <div style="color:var(--text-tertiary);font-size:12px">${i + 1}</div>
@@ -3631,13 +3651,13 @@ ${validStr ? `<div class="notes">Условия КП действуют до ${v
         <div><input type="text" data-field="unit" value="${escapeHtml(it.unit || '')}"></div>
         <div><input type="number" data-field="quantity" value="${it.quantity}" min="0" step="0.001"></div>
         <div><input type="number" data-field="price" value="${it.price}" min="0" step="0.01"></div>
-        <div>
+        <div class="vat-col">
           <select data-field="vat_rate">
             <option value="no_vat" ${it.vat_rate === 'no_vat' ? 'selected' : ''}>Без НДС</option>
             <option value="5" ${it.vat_rate === '5' ? 'selected' : ''}>5%</option>
           </select>
         </div>
-        <div class="calc" data-calc="vat">${vatText}</div>
+        <div class="calc vat-col" data-calc="vat">${vatText}</div>
         <div class="calc" data-calc="amount">${amountText}</div>
         <div><button type="button" class="row-del" title="Удалить">×</button></div>
       </div>`;
@@ -3932,6 +3952,11 @@ ${validStr ? `<div class="notes">Условия КП действуют до ${v
       console.warn('Не удалось обновить статус сделки на «КП отправлено»:', e.message);
     }
   }
+
+  document.getElementById('prop-items').classList.add('vat-hidden');
+  document.getElementById('prop-show-vat').addEventListener('change', function () {
+    document.getElementById('prop-items').classList.toggle('vat-hidden', !this.checked);
+  });
 
   document.getElementById('prop-btn-save-draft').addEventListener('click', () => saveProposal('draft'));
   document.getElementById('prop-btn-save-send').addEventListener('click', () => saveProposal('sent'));
