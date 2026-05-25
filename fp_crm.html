@@ -80,7 +80,7 @@
   .field-hint { font-size: 12px; color: var(--text-tertiary); margin-top: 4px; }
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   @media (max-width: 600px) { .row { grid-template-columns: 1fr; } }
-  input[type="text"], input[type="number"], input[type="date"], input[type="datetime-local"], select, textarea {
+  input[type="text"], input[type="tel"], input[type="email"], input[type="number"], input[type="date"], input[type="datetime-local"], select, textarea {
     width: 100%; padding: 8px 10px; border: 0.5px solid var(--border);
     border-radius: var(--radius); font-size: 14px; font-family: inherit;
     background: var(--bg); color: var(--text);
@@ -259,6 +259,23 @@
   }
   .toast.show { opacity: 1; }
   .toast.error { background: var(--danger); }
+  .dialog-card {
+    max-width: 440px; width: 100%; padding: 1.5rem;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+    animation: dialogIn 0.14s ease-out;
+  }
+  @keyframes dialogIn {
+    from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .dialog-title { font-size: 16px; font-weight: 500; margin-bottom: 8px; }
+  .dialog-message {
+    font-size: 14px; color: var(--text-secondary);
+    line-height: 1.5; margin-bottom: 1rem; white-space: pre-line;
+  }
+  .dialog-input-wrap { margin-bottom: 1rem; }
+  .dialog-input-hint { font-size: 12px; color: var(--text-tertiary); margin-top: 6px; }
+  .dialog-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
   .timeline { border-left: 2px solid var(--border); padding-left: 16px; margin: 12px 0 0 8px; }
   .timeline-item { position: relative; padding-bottom: 14px; }
   .timeline-item::before {
@@ -728,14 +745,14 @@
         </div>
         <div class="field">
           <label>Телефон</label>
-          <input type="text" id="f-phone" placeholder="+7...">
+          <input type="tel" id="f-phone" inputmode="tel" autocomplete="tel" placeholder="+7 (999) 123-45-67">
         </div>
       </div>
 
       <div class="row">
         <div class="field">
           <label>Email</label>
-          <input type="text" id="f-email" inputmode="email" placeholder="name@example.com">
+          <input type="email" id="f-email" inputmode="email" autocomplete="email" placeholder="name@example.com">
         </div>
         <div class="field">
           <label>Контактное лицо</label>
@@ -1096,11 +1113,11 @@
     <div class="row">
       <div class="field">
         <label>Телефон</label>
-        <input type="tel" id="lead-phone" placeholder="+7 ...">
+        <input type="tel" id="lead-phone" inputmode="tel" autocomplete="tel" placeholder="+7 (999) 123-45-67">
       </div>
       <div class="field">
         <label>Email</label>
-        <input type="text" id="lead-email" inputmode="email" placeholder="info@example.com">
+        <input type="email" id="lead-email" inputmode="email" autocomplete="email" placeholder="info@example.com">
       </div>
     </div>
 
@@ -1178,6 +1195,32 @@
     <div class="actions" style="margin-top:14px">
       <button id="kanban-move-save" class="primary">Сохранить</button>
       <button id="kanban-move-cancel">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="dialog-modal">
+  <div class="modal dialog-card" id="dialog-card">
+    <div class="dialog-title" id="dialog-title">—</div>
+    <div class="dialog-message" id="dialog-message"></div>
+    <div class="dialog-input-wrap" id="dialog-input-wrap" style="display:none">
+      <div class="field" id="dialog-type-field" style="display:none;margin-bottom:12px">
+        <label>Тип касания</label>
+        <select id="dialog-type">
+          <option value="call">Звонок</option>
+          <option value="meeting">Встреча</option>
+          <option value="demo">Демо</option>
+          <option value="proposal">Отправка КП</option>
+          <option value="invoice">Выставлен счёт</option>
+          <option value="note">Заметка</option>
+        </select>
+      </div>
+      <textarea id="dialog-input" rows="3"></textarea>
+      <div class="dialog-input-hint" id="dialog-input-hint"></div>
+    </div>
+    <div class="dialog-actions">
+      <button id="dialog-cancel">Отмена</button>
+      <button id="dialog-confirm" class="primary">OK</button>
     </div>
   </div>
 </div>
@@ -1523,9 +1566,11 @@
 
       out[k] = v;
     });
-    // Колонок activity_type/activity_summary в deals нет — отрезаем
+    // Колонок activity_type/activity_summary в deals нет — отрезаем.
+    // skip_activity — служебный флаг (управляет созданием касания), не колонка.
     delete out.activity_type;
     delete out.activity_summary;
+    delete out.skip_activity;
     return out;
   }
 
@@ -1641,22 +1686,26 @@
       }
 
       // Activity — отдельная запись на каждое касание.
-      // id больше не задаём — БД сама. Получаем id из ответа для связи с pain_quotes.
-      const activityPayload = {
-        deal_id: dealId,
-        created_at: nowMysql,
-        seller_id: body.seller_id || null,
-        type: body.activity_type || 'call',
-        summary: body.activity_summary || '',
-        status_after: body.status || '',
-        temperature_after: body.temperature || '',
-        next_step: body.next_step || '',
-        next_date: body.next_date ? toMysqlDateTime(body.next_date) : null
-      };
-      const createdActivity = await rest('POST', '/records/activity', activityPayload);
-      const activityId = (typeof createdActivity === 'number' || typeof createdActivity === 'string')
-        ? Number(createdActivity)
-        : (createdActivity && createdActivity.id ? Number(createdActivity.id) : null);
+      // Если фронт прислал skip_activity (резюме пустое и продавец отказался
+      // от касания) — карточку сохраняем, но касание не создаём.
+      let activityId = null;
+      if (!body.skip_activity) {
+        const activityPayload = {
+          deal_id: dealId,
+          created_at: nowMysql,
+          seller_id: body.seller_id || null,
+          type: body.activity_type || 'call',
+          summary: body.activity_summary || '',
+          status_after: body.status || '',
+          temperature_after: body.temperature || '',
+          next_step: body.next_step || '',
+          next_date: body.next_date ? toMysqlDateTime(body.next_date) : null
+        };
+        const createdActivity = await rest('POST', '/records/activity', activityPayload);
+        activityId = (typeof createdActivity === 'number' || typeof createdActivity === 'string')
+          ? Number(createdActivity)
+          : (createdActivity && createdActivity.id ? Number(createdActivity.id) : null);
+      }
 
       // Pain quote — каждое касание может добавить новую цитату
       const painText = String(body.pain_quote || '').trim();
@@ -1792,6 +1841,76 @@
   }
 
   // ============================================================
+  // ============================================================
+  // DIALOG — кастомный confirm/prompt вместо нативного
+  // ============================================================
+  function showDialog(opts) {
+    return new Promise(resolve => {
+      const o = opts || {};
+      const modal = document.getElementById('dialog-modal');
+      const titleEl = document.getElementById('dialog-title');
+      const msgEl = document.getElementById('dialog-message');
+      const wrap = document.getElementById('dialog-input-wrap');
+      const input = document.getElementById('dialog-input');
+      const hint = document.getElementById('dialog-input-hint');
+      const typeField = document.getElementById('dialog-type-field');
+      const typeSelect = document.getElementById('dialog-type');
+      const btnOk = document.getElementById('dialog-confirm');
+      const btnCancel = document.getElementById('dialog-cancel');
+
+      titleEl.textContent = o.title || 'Подтверждение';
+      msgEl.textContent = o.message || '';
+      msgEl.style.display = o.message ? 'block' : 'none';
+      btnOk.textContent = o.confirmText || 'OK';
+      btnCancel.textContent = o.cancelText || 'Отмена';
+
+      const isInput = !!o.input;
+      const withType = isInput && !!o.type;
+      wrap.style.display = isInput ? 'block' : 'none';
+      typeField.style.display = withType ? 'block' : 'none';
+      if (isInput) {
+        input.value = o.inputValue || '';
+        input.placeholder = o.inputPlaceholder || '';
+        hint.textContent = o.inputHint || '';
+        hint.style.display = o.inputHint ? 'block' : 'none';
+        if (withType) typeSelect.value = o.typeValue || 'call';
+      }
+
+      function cleanup() {
+        modal.classList.remove('show');
+        btnOk.removeEventListener('click', onOk);
+        btnCancel.removeEventListener('click', onCancel);
+        document.removeEventListener('keydown', onKey);
+      }
+      function onOk() {
+        let val;
+        if (isInput) {
+          val = withType ? { text: input.value, type: typeSelect.value } : input.value;
+        } else {
+          val = true;
+        }
+        cleanup();
+        resolve(isInput ? val : true);
+      }
+      function onCancel() {
+        cleanup();
+        resolve(isInput ? null : false);
+      }
+      function onKey(e) {
+        if (e.key === 'Escape') onCancel();
+        if (e.key === 'Enter' && !isInput) onOk();
+      }
+
+      btnOk.addEventListener('click', onOk);
+      btnCancel.addEventListener('click', onCancel);
+      document.addEventListener('keydown', onKey);
+
+      modal.classList.add('show');
+      modal.scrollTop = 0;
+      setTimeout(() => (isInput ? input : btnOk).focus(), 60);
+    });
+  }
+
   // CURRENT USER + USERS CACHE
   // ============================================================
   // currentUser: { id, login, full_name, role, ... } — кто сейчас залогинен
@@ -2846,8 +2965,51 @@
       showToast('Укажите хотя бы название клиента', true);
       return;
     }
-    if (!data.activity_summary || data.activity_summary.trim().length < 3) {
-      if (!confirm('Резюме разговора пустое. Точно сохранить?')) return;
+    if (!isValidEmail(data.email)) {
+      markEmailField(document.getElementById('f-email'), false);
+      showToast('Проверьте email — формат неверный', true);
+      return;
+    }
+    const summary = (data.activity_summary || '').trim();
+    if (summary.length < 3) {
+      const wantActivity = await showDialog({
+        title: 'Резюме разговора пустое',
+        message: 'Добавить касание в историю или сохранить карточку без него?',
+        confirmText: 'Добавить касание',
+        cancelText: 'Сохранить без касания'
+      });
+      if (wantActivity) {
+        let entered = '';
+        let chosenType = data.activity_type || 'call';
+        let hint = '';
+        while (true) {
+          const res = await showDialog({
+            title: 'Опишите касание',
+            message: 'Выберите тип и коротко опишите, что произошло в этот раз.',
+            confirmText: 'Сохранить',
+            cancelText: 'Отмена',
+            input: true,
+            type: true,
+            typeValue: chosenType,
+            inputValue: entered,
+            inputPlaceholder: 'Например: перезвонил, договорились о демо',
+            inputHint: hint
+          });
+          if (res === null) return;
+          entered = (res.text || '').trim();
+          chosenType = res.type || 'call';
+          if (entered) break;
+          hint = 'Поле не может быть пустым — опишите касание.';
+        }
+        data.activity_summary = entered;
+        data.activity_type = chosenType;
+        const ta = document.getElementById('f-activity_summary');
+        if (ta) ta.value = entered;
+        const ts = document.getElementById('f-activity_type');
+        if (ts) ts.value = chosenType;
+      } else {
+        data.skip_activity = true;
+      }
     }
     setSync('syncing', 'Сохраняем...');
     try {
@@ -4003,6 +4165,11 @@ ${validStr ? `<div class="notes">Условия КП действуют до ${v
       showToast('Заполните хотя бы название, телефон или email', true);
       return;
     }
+    if (!isValidEmail(email)) {
+      markEmailField(document.getElementById('lead-email'), false);
+      showToast('Проверьте email — формат неверный', true);
+      return;
+    }
     const note = document.getElementById('lead-note').value.trim();
 
     const btnSave = document.getElementById('lead-btn-save');
@@ -4074,6 +4241,69 @@ ${validStr ? `<div class="notes">Условия КП действуют до ${v
   document.getElementById('lead-modal-close').addEventListener('click', closeNewLeadModal);
   document.getElementById('lead-btn-cancel').addEventListener('click', closeNewLeadModal);
   document.getElementById('lead-btn-save').addEventListener('click', saveNewLead);
+
+  // ==================== EMAIL VALIDATION ====================
+  function isValidEmail(value) {
+    const v = (value || '').trim();
+    if (!v) return true;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  }
+
+  function markEmailField(input, valid) {
+    if (!input) return;
+    input.style.borderColor = valid ? '' : 'var(--danger)';
+    input.style.boxShadow = valid ? '' : '0 0 0 2px rgba(163,45,45,0.12)';
+  }
+
+  (function attachEmailValidation() {
+    ['lead-email', 'f-email'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('input', () => {
+        if (isValidEmail(el.value)) markEmailField(el, true);
+      });
+      el.addEventListener('blur', () => {
+        markEmailField(el, isValidEmail(el.value));
+      });
+    });
+  })();
+
+  // ==================== ФОРМАТИРОВАНИЕ ТЕЛЕФОНА ====================
+  function formatRuPhone(raw) {
+    let digits = (raw || '').replace(/\D/g, '');
+    if (!digits) return '';
+    if (digits[0] === '8') digits = '7' + digits.slice(1);
+    if (digits[0] === '9' && digits.length <= 10) digits = '7' + digits;
+    if (digits[0] !== '7' || digits.length > 11) {
+      return raw.trim();
+    }
+    const d = digits.slice(1);
+    let out = '+7';
+    if (d.length > 0) out += ' (' + d.slice(0, 3);
+    if (d.length >= 3) out += ')';
+    if (d.length > 3) out += ' ' + d.slice(3, 6);
+    if (d.length > 6) out += '-' + d.slice(6, 8);
+    if (d.length > 8) out += '-' + d.slice(8, 10);
+    return out;
+  }
+
+  (function attachPhoneFormatter() {
+    ['lead-phone', 'f-phone'].forEach(id => {
+      const phoneInput = document.getElementById(id);
+      if (!phoneInput) return;
+      phoneInput.addEventListener('input', () => {
+        const before = phoneInput.value;
+        const formatted = formatRuPhone(before);
+        if (formatted !== before) {
+          phoneInput.value = formatted;
+          phoneInput.setSelectionRange(formatted.length, formatted.length);
+        }
+      });
+      phoneInput.addEventListener('blur', () => {
+        phoneInput.value = formatRuPhone(phoneInput.value);
+      });
+    });
+  })();
 
   // ==================== ACCEPT LEAD (Принять в работу) ====================
   // Переводит лид в статус «Первичный контакт» — становится сделкой.
