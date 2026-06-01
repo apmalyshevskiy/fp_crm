@@ -606,6 +606,92 @@
     font-size: 12px; color: var(--text-secondary);
     margin-bottom: 12px;
   }
+
+  /* ==================== CALENDAR ==================== */
+  .cal-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .cal-btn {
+    padding: 6px 12px; border: 0.5px solid var(--border); background: var(--bg);
+    border-radius: var(--radius); font-size: 13px; cursor: pointer; color: var(--text);
+  }
+  .cal-btn:hover { border-color: var(--border-strong); }
+  .cal-btn.active { background: var(--text); color: #fff; border-color: var(--text); }
+  .cal-nav { display: flex; gap: 4px; }
+  .cal-arrow { width: 34px; padding: 6px 0; font-size: 16px; line-height: 1; }
+  .cal-label { font-size: 15px; font-weight: 500; margin-left: 6px; text-transform: capitalize; }
+  .cal-spacer { flex: 1; }
+  .cal-views { display: flex; gap: 4px; }
+  .cal-legend { font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; }
+
+  .cal-head-row { display: flex; }
+  .cal-gutter-spacer, .cal-gutter { width: 56px; flex: 0 0 56px; }
+  .cal-heads, .cal-cols, .cal-allday-cells { display: flex; flex: 1; min-width: 0; }
+  .cal-dayhead {
+    flex: 1 1 0; min-width: 0; text-align: center; padding: 6px 2px;
+    font-size: 12px; color: var(--text-secondary); border-left: 0.5px solid var(--border);
+  }
+  .cal-dayhead .cal-dh-num { font-size: 15px; font-weight: 500; color: var(--text); }
+  .cal-dayhead.today .cal-dh-num { background: var(--text); color: #fff; border-radius: 50%; padding: 1px 7px; display: inline-block; }
+
+  .cal-allday-row { display: flex; border-top: 0.5px solid var(--border); border-bottom: 0.5px solid var(--border); background: var(--bg-secondary); }
+  .cal-allday-label { width: 56px; flex: 0 0 56px; font-size: 10px; color: var(--text-tertiary); padding: 6px 4px; }
+  .cal-allday-cell { flex: 1 1 0; min-width: 0; border-left: 0.5px solid var(--border); padding: 4px; display: flex; flex-direction: column; gap: 3px; }
+
+  .cal-scroll { max-height: 64vh; overflow: auto; border: 0.5px solid var(--border); border-radius: var(--radius); background: var(--bg); }
+  .cal-grid { display: flex; position: relative; }
+  .cal-gutter { position: relative; }
+  .cal-time { position: absolute; right: 6px; transform: translateY(-50%); font-size: 11px; color: var(--text-tertiary); }
+  .cal-col { flex: 1 1 0; min-width: 0; border-left: 0.5px solid var(--border); }
+  .cal-col-grid { position: relative; }
+  .cal-hourline { position: absolute; left: 0; right: 0; border-top: 0.5px solid var(--border); }
+  .cal-halfline { position: absolute; left: 0; right: 0; border-top: 0.5px dashed var(--border); opacity: 0.5; }
+  .cal-now { position: absolute; left: 0; right: 0; border-top: 2px solid var(--danger); z-index: 3; }
+  .cal-now::before { content: ''; position: absolute; left: 0; top: -4px; width: 7px; height: 7px; border-radius: 50%; background: var(--danger); }
+  .cal-event {
+    position: absolute; overflow: hidden; border-radius: 6px; padding: 2px 6px;
+    font-size: 11px; line-height: 1.15; cursor: grab; border: 0.5px solid var(--border);
+    background: var(--bg-secondary); box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    z-index: 2; display: flex; flex-direction: column; gap: 0;
+  }
+  .cal-ev-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cal-event .cal-ev-time { font-weight: 600; margin-right: 3px; }
+  .cal-ev-goal { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 10px; opacity: 0.8; }
+  .cal-event.temp-hot  { background: var(--hot-bg);  color: var(--hot-text);  border-color: var(--hot-text); }
+  .cal-event.temp-warm { background: var(--warm-bg); color: var(--warm-text); border-color: #c9892f; }
+  .cal-event.temp-cold { background: var(--cold-bg); color: var(--cold-text); border-color: #5b8fc0; }
+  .cal-ev-lead { font-size: 10px; background: var(--gold); color: #fff; border-radius: 4px; padding: 0 4px; margin-left: 4px; }
+  .cal-chip { font-size: 11px; padding: 2px 6px; border-radius: 5px; background: var(--bg-tertiary); cursor: grab; overflow: hidden; }
+  .cal-chip-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cal-chip-goal { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 10px; opacity: 0.8; }
+  .cal-chip.temp-hot  { background: var(--hot-bg);  color: var(--hot-text); }
+  .cal-chip.temp-warm { background: var(--warm-bg); color: var(--warm-text); }
+  .cal-chip.temp-cold { background: var(--cold-bg); color: var(--cold-text); }
+  .cal-empty-note { font-size: 12px; color: var(--text-tertiary); padding: 10px 4px; }
+
+  /* drag-drop */
+  .cal-event { cursor: grab; }
+  .cal-event:active { cursor: grabbing; }
+  .cal-event.cal-dragging, .cal-mchip.cal-dragging { opacity: 0.4; }
+  .cal-mchip { cursor: grab; }
+  .cal-drop-indicator { position: absolute; left: 0; right: 0; height: 0; border-top: 2px solid var(--gold); z-index: 5; pointer-events: none; }
+  .cal-drop-indicator::before { content: ''; position: absolute; left: 2px; top: -4px; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); }
+  .cal-mcell.cal-drop-hover { outline: 2px solid var(--gold); outline-offset: -2px; background: var(--bg-secondary); }
+
+  /* Month */
+  .cal-mwds { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 4px; }
+  .cal-mwd { text-align: center; font-size: 12px; color: var(--text-secondary); padding: 4px; }
+  .cal-mgrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border); border: 0.5px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .cal-mcell { background: var(--bg); min-height: 96px; padding: 4px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+  .cal-mcell.out { background: var(--bg-secondary); }
+  .cal-mcell.out .cal-mnum { color: var(--text-tertiary); }
+  .cal-mcell:hover { background: var(--bg-secondary); }
+  .cal-mnum { font-size: 12px; font-weight: 500; align-self: flex-start; }
+  .cal-mcell.today .cal-mnum { background: var(--text); color: #fff; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; }
+  .cal-mchip { font-size: 11px; padding: 1px 5px; border-radius: 4px; background: var(--bg-tertiary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cal-mchip.temp-hot  { background: var(--hot-bg);  color: var(--hot-text); }
+  .cal-mchip.temp-warm { background: var(--warm-bg); color: var(--warm-text); }
+  .cal-mchip.temp-cold { background: var(--cold-bg); color: var(--cold-text); }
+  .cal-mmore { font-size: 10px; color: var(--text-secondary); }
+  @media (max-width: 720px) { .cal-mcell { min-height: 70px; } .cal-label { font-size: 13px; } }
 </style>
 </head>
 <body>
@@ -631,6 +717,7 @@
     <div class="tab active" data-tab="dashboard">Дашборд</div>
     <div class="tab" data-tab="leads">Лиды</div>
     <div class="tab" data-tab="kanban">Канбан</div>
+    <div class="tab" data-tab="calendar">Календарь</div>
     <div class="tab" data-tab="deals">Сделки</div>
     <div class="tab" data-tab="quotes">Цитаты боли</div>
     <div class="tab" data-tab="rejections">Отказы</div>
@@ -658,6 +745,28 @@
       <span>Воронка слева направо. Клик по карточке → детали сделки. Чтобы изменить статус — «+ Новое касание».</span>
     </div>
     <div class="kanban-wrap" id="kanban-wrap"></div>
+  </div>
+
+  <!-- CALENDAR -->
+  <div class="panel" id="panel-calendar">
+    <div class="cal-toolbar">
+      <button class="cal-btn" id="cal-today">Сегодня</button>
+      <div class="cal-nav">
+        <button class="cal-btn cal-arrow" id="cal-prev" title="Назад">‹</button>
+        <button class="cal-btn cal-arrow" id="cal-next" title="Вперёд">›</button>
+      </div>
+      <div class="cal-label" id="cal-label">—</div>
+      <div class="cal-spacer"></div>
+      <div class="cal-views">
+        <button class="cal-btn cal-view" data-cal-view="day">День</button>
+        <button class="cal-btn cal-view active" data-cal-view="week">Неделя</button>
+        <button class="cal-btn cal-view" data-cal-view="month">Месяц</button>
+      </div>
+    </div>
+    <div class="cal-legend">
+      Запланированные следующие контакты (по дате и времени из «Следующий шаг»). Один блок ≈ 30 минут. Клик по событию → карточка сделки. Перетащите событие, чтобы перенести контакт на другое время или день.
+    </div>
+    <div id="cal-host"></div>
   </div>
 
   <!-- LEADS -->
@@ -2080,7 +2189,93 @@
       document.getElementById('panel-' + t.dataset.tab).classList.add('active');
       // При открытии вкладки «Отказы» — подгружаем сводку с сервера
       if (t.dataset.tab === 'rejections') loadRejections();
+      if (t.dataset.tab === 'calendar') renderCalendar();
     });
+  });
+
+  // Календарь: тулбар и клики по событиям
+  document.getElementById('cal-today').addEventListener('click', () => { calAnchor = calStartOfDay(new Date()); renderCalendar(); });
+  document.getElementById('cal-prev').addEventListener('click', () => calNav(-1));
+  document.getElementById('cal-next').addEventListener('click', () => calNav(1));
+  document.querySelectorAll('[data-cal-view]').forEach(b => {
+    b.addEventListener('click', () => { calView = b.dataset.calView; renderCalendar(); });
+  });
+  document.getElementById('cal-host').addEventListener('click', e => {
+    if (calJustDragged) return;
+    const ev = e.target.closest('[data-id]');
+    if (ev && ev.dataset.id) { openDetail(ev.dataset.id); return; }
+    const cell = e.target.closest('.cal-mcell');
+    if (cell && cell.dataset.day) {
+      const p = cell.dataset.day.split('-').map(Number);
+      calAnchor = calStartOfDay(new Date(p[0], p[1] - 1, p[2]));
+      calView = 'day';
+      renderCalendar();
+    }
+  });
+
+  // Drag-drop: перенос события по сетке (день/неделя) и по дням (месяц)
+  const calHost = document.getElementById('cal-host');
+  calHost.addEventListener('dragstart', e => {
+    const ev = e.target.closest('.cal-event');       // событие на сетке (день/неделя)
+    const mchip = e.target.closest('.cal-mchip');    // чип в режиме «Месяц»
+    const adchip = e.target.closest('.cal-chip');    // чип в полосе «без времени»
+    const node = ev || mchip || adchip;
+    if (!node || !node.dataset.id) return;
+    let kind = 'month', grabOffset = 0;
+    if (ev) { kind = 'event'; grabOffset = e.clientY - ev.getBoundingClientRect().top; }
+    else if (adchip) { kind = 'event'; grabOffset = 0; } // «без времени» → бросаем на слот, чтобы задать время
+    calDrag = { id: node.dataset.id, kind, grabOffset };
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', node.dataset.id); } catch (_) {}
+    }
+    node.classList.add('cal-dragging');
+  });
+  calHost.addEventListener('dragover', e => {
+    if (!calDrag) return;
+    const colGrid = e.target.closest('.cal-col-grid');
+    const cell = e.target.closest('.cal-mcell');
+    if (colGrid && calDrag.kind === 'event') {
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+      calClearDropCues();
+      calShowIndicator(colGrid, calComputeMinutes(colGrid, e.clientY));
+    } else if (cell) {
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+      calClearDropCues();
+      cell.classList.add('cal-drop-hover');
+    }
+  });
+  calHost.addEventListener('drop', e => {
+    if (!calDrag) return;
+    const colGrid = e.target.closest('.cal-col-grid');
+    const cell = e.target.closest('.cal-mcell');
+    if (colGrid && calDrag.kind === 'event' && colGrid.dataset.day) {
+      e.preventDefault();
+      const mins = calComputeMinutes(colGrid, e.clientY);
+      const p = colGrid.dataset.day.split('-').map(Number);
+      const ns = new Date(p[0], p[1] - 1, p[2], Math.floor(mins / 60), mins % 60, 0);
+      const id = calDrag.id;
+      calClearDropCues();
+      calMoveDeal(id, ns);
+    } else if (cell && cell.dataset.day) {
+      e.preventDefault();
+      const d = deals.find(x => Number(x.id) === Number(calDrag.id));
+      const old = d ? calParseDT(d.next_date) : null;
+      const p = cell.dataset.day.split('-').map(Number);
+      const ns = new Date(p[0], p[1] - 1, p[2], old ? old.getHours() : 0, old ? old.getMinutes() : 0, 0);
+      const id = calDrag.id;
+      calClearDropCues();
+      calMoveDeal(id, ns);
+    }
+  });
+  calHost.addEventListener('dragend', () => {
+    calClearDropCues();
+    document.querySelectorAll('.cal-dragging').forEach(n => n.classList.remove('cal-dragging'));
+    calDrag = null;
+    calJustDragged = true;
+    setTimeout(() => { calJustDragged = false; }, 50);
   });
 
   // Нормализация для поиска: lower-case + только значимые символы
@@ -2186,12 +2381,279 @@
     return {call: 'Звонок', meeting: 'Встреча', demo: 'Демо', proposal: 'КП', invoice: 'Счёт', note: 'Заметка'}[t] || t;
   }
 
+  // ==================== CALENDAR ====================
+  // Показывает сделки/лиды на сетке по дате и времени поля next_date
+  // («Следующий шаг»). Каждое событие = блок ~30 минут.
+  const CAL_SLOT_PX = 34;          // высота получасового слота
+  const CAL_DAY_START_DEFAULT = 8; // нижняя граница сетки по умолчанию (час)
+  const CAL_DAY_END_DEFAULT = 20;  // верхняя граница по умолчанию (час)
+  const CAL_EVENT_MIN = 30;        // длительность одного контакта, мин
+  let calView = 'week';            // 'day' | 'week' | 'month'
+  let calAnchor = calStartOfDay(new Date());
+  let calCurrentRange = { startH: CAL_DAY_START_DEFAULT, endH: CAL_DAY_END_DEFAULT }; // активный диапазон сетки (для drag-drop)
+  let calDrag = null;              // { id, kind:'event'|'month', grabOffset }
+  let calJustDragged = false;      // подавляет click после перетаскивания
+
+  function calStartOfDay(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
+  function calAddDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+  function calSameDay(a, b) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
+  function calStartOfWeek(d) { const x = calStartOfDay(d); const wd = (x.getDay() + 6) % 7; return calAddDays(x, -wd); } // понедельник
+  function calStartOfMonth(d) { const x = calStartOfDay(d); x.setDate(1); return x; }
+  function calWeekDays(d) { const s = calStartOfWeek(d); return Array.from({ length: 7 }, (_, i) => calAddDays(s, i)); }
+  function calYmd(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+
+  // Надёжный парсер: 'YYYY-MM-DD HH:MM:SS', 'YYYY-MM-DDTHH:MM', 'YYYY-MM-DD', ISO.
+  // Дата без времени → полночь (трактуется как «без времени»).
+  function calParseDT(s) {
+    if (!s) return null;
+    if (s instanceof Date) return isNaN(s) ? null : s;
+    const str = String(s).trim();
+    let m = str.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
+    if (m) return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0));
+    m = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+    const d = new Date(str);
+    return isNaN(d) ? null : d;
+  }
+
+  // Сделки и лиды с запланированным следующим контактом (кроме закрытых и архива)
+  function calEvents() {
+    return deals
+      .filter(d => !isArchived(d) && d.next_date && d.status !== 'Оплачено' && d.status !== 'Отказ')
+      .map(d => { const start = calParseDT(d.next_date); return start ? { deal: d, start } : null; })
+      .filter(Boolean);
+  }
+  function calEventsForDay(evts, day) {
+    return evts.filter(e => calSameDay(e.start, day)).sort((a, b) => a.start - b.start);
+  }
+  function calIsAllDay(e) { return e.start.getHours() === 0 && e.start.getMinutes() === 0; }
+
+  // Диапазон часов сетки: по умолчанию 8–20, расширяется под крайние события
+  function calRange(timed) {
+    let startH = CAL_DAY_START_DEFAULT, endH = CAL_DAY_END_DEFAULT;
+    timed.forEach(e => {
+      const h = e.start.getHours();
+      if (h < startH) startH = h;
+      if (h + 1 > endH) endH = h + 1;
+    });
+    startH = Math.max(0, startH);
+    endH = Math.min(24, Math.max(endH, startH + 1));
+    return { startH, endH };
+  }
+
+  // Раскладка пересекающихся событий по «дорожкам» (side-by-side)
+  function calPackLanes(dayEvents) {
+    const dur = CAL_EVENT_MIN * 60000;
+    const laneEnds = [];
+    dayEvents.forEach(e => {
+      e.end = new Date(e.start.getTime() + dur);
+      let placed = false;
+      for (let i = 0; i < laneEnds.length; i++) {
+        if (laneEnds[i] <= e.start) { e.lane = i; laneEnds[i] = e.end; placed = true; break; }
+      }
+      if (!placed) { e.lane = laneEnds.length; laneEnds.push(e.end); }
+    });
+    dayEvents.forEach(e => {
+      const group = dayEvents.filter(o => o.start < e.end && e.start < o.end);
+      e.cols = Math.max(...group.map(o => o.lane)) + 1;
+    });
+  }
+
+  function calTimeStr(d) { return d.toLocaleString('ru-RU', { hour: '2-digit', minute: '2-digit' }); }
+
+  function calGutterHtml(range) {
+    let html = '';
+    for (let h = range.startH; h <= range.endH; h++) {
+      const top = (h - range.startH) * 2 * CAL_SLOT_PX;
+      html += `<div class="cal-time" style="top:${top}px">${String(h).padStart(2, '0')}:00</div>`;
+    }
+    return `<div class="cal-gutter">${html}</div>`;
+  }
+
+  function calDayColumn(day, evts, range) {
+    const timed = calEventsForDay(evts, day).filter(e => !calIsAllDay(e));
+    calPackLanes(timed);
+    const rows = (range.endH - range.startH) * 2;
+    const height = rows * CAL_SLOT_PX;
+    let lines = '';
+    for (let h = range.startH; h <= range.endH; h++) {
+      const top = (h - range.startH) * 2 * CAL_SLOT_PX;
+      lines += `<div class="cal-hourline" style="top:${top}px"></div>`;
+      if (h < range.endH) lines += `<div class="cal-halfline" style="top:${top + CAL_SLOT_PX}px"></div>`;
+    }
+    const now = new Date();
+    let nowLine = '';
+    if (calSameDay(day, now) && now.getHours() >= range.startH && now.getHours() < range.endH) {
+      const mins = (now.getHours() - range.startH) * 60 + now.getMinutes();
+      nowLine = `<div class="cal-now" style="top:${mins / 30 * CAL_SLOT_PX}px"></div>`;
+    }
+    const eventsHtml = timed.map(e => {
+      const d = e.deal;
+      const mins = (e.start.getHours() - range.startH) * 60 + e.start.getMinutes();
+      const top = mins / 30 * CAL_SLOT_PX;
+      const blockH = (CAL_EVENT_MIN / 30) * CAL_SLOT_PX - 2;
+      const width = 100 / e.cols;
+      const left = e.lane * width;
+      const temp = d.temperature ? 'temp-' + d.temperature : '';
+      const lead = isLead(d) ? '<span class="cal-ev-lead">лид</span>' : '';
+      const t = calTimeStr(e.start);
+      const goal = d.next_step ? `<div class="cal-ev-goal">Цель: ${escapeHtml(d.next_step)}</div>` : '';
+      return `<div class="cal-event ${temp}" draggable="true" data-id="${escapeHtml(d.id)}" style="top:${top}px;height:${blockH}px;left:calc(${left}% + 2px);width:calc(${width}% - 4px)" title="${escapeHtml(t + ' · ' + (d.client_name || '') + (d.next_step ? ' — Цель: ' + d.next_step : ''))}"><div class="cal-ev-line"><span class="cal-ev-time">${t}</span>${escapeHtml(d.client_name || 'Без названия')}${lead}</div>${goal}</div>`;
+    }).join('');
+    return `<div class="cal-col-grid" data-day="${calYmd(day)}" style="height:${height}px">${lines}${nowLine}${eventsHtml}</div>`;
+  }
+
+  // Сетка для день/неделя
+  function calRenderTimeGrid(days) {
+    const evts = calEvents();
+    const allTimed = [];
+    days.forEach(day => calEventsForDay(evts, day).filter(e => !calIsAllDay(e)).forEach(e => allTimed.push(e)));
+    const range = calRange(allTimed);
+    calCurrentRange = range;
+    const heads = days.map(day => {
+      const wd = day.toLocaleDateString('ru-RU', { weekday: 'short' });
+      return `<div class="cal-dayhead ${calSameDay(day, new Date()) ? 'today' : ''}"><span class="cal-dh-wd">${wd}</span> <span class="cal-dh-num">${day.getDate()}</span></div>`;
+    }).join('');
+    const hasAllday = days.some(day => calEventsForDay(evts, day).filter(calIsAllDay).length > 0);
+    const alldayCells = days.map(day => {
+      const chips = calEventsForDay(evts, day).filter(calIsAllDay).map(e => {
+        const d = e.deal;
+        const goal = d.next_step ? `<div class="cal-chip-goal">Цель: ${escapeHtml(d.next_step)}</div>` : '';
+        const ttl = (d.client_name || '') + (d.next_step ? ' — Цель: ' + d.next_step : '');
+        return `<div class="cal-chip ${d.temperature ? 'temp-' + d.temperature : ''}" draggable="true" data-id="${escapeHtml(d.id)}" title="${escapeHtml(ttl)}"><div class="cal-chip-name">${escapeHtml(d.client_name || 'Без названия')}</div>${goal}</div>`;
+      }).join('');
+      return `<div class="cal-allday-cell">${chips}</div>`;
+    }).join('');
+    const cols = days.map(day => `<div class="cal-col">${calDayColumn(day, evts, range)}</div>`).join('');
+    const note = allTimed.length === 0 && !hasAllday
+      ? '<div class="cal-empty-note">На этот период нет запланированных контактов.</div>' : '';
+    return `
+      <div class="cal-head-row">
+        <div class="cal-gutter-spacer"></div>
+        <div class="cal-heads">${heads}</div>
+      </div>
+      ${hasAllday ? `<div class="cal-allday-row"><div class="cal-allday-label">без времени</div><div class="cal-allday-cells">${alldayCells}</div></div>` : ''}
+      ${note}
+      <div class="cal-scroll">
+        <div class="cal-grid">
+          ${calGutterHtml(range)}
+          <div class="cal-cols">${cols}</div>
+        </div>
+      </div>`;
+  }
+
+  function calRenderMonth() {
+    const evts = calEvents();
+    const first = calStartOfMonth(calAnchor);
+    const gridStart = calStartOfWeek(first);
+    let cells = '';
+    for (let i = 0; i < 42; i++) {
+      const day = calAddDays(gridStart, i);
+      const inMonth = day.getMonth() === first.getMonth();
+      const dayEvts = calEventsForDay(evts, day);
+      const shown = dayEvts.slice(0, 3);
+      const more = dayEvts.length - shown.length;
+      const chips = shown.map(e => {
+        const d = e.deal;
+        const t = calIsAllDay(e) ? '' : calTimeStr(e.start) + ' ';
+        return `<div class="cal-mchip ${d.temperature ? 'temp-' + d.temperature : ''}" draggable="true" data-id="${escapeHtml(d.id)}" title="${escapeHtml((d.client_name || '') + (d.next_step ? ' — Цель: ' + d.next_step : ''))}">${t}${escapeHtml(d.client_name || 'Без названия')}</div>`;
+      }).join('');
+      cells += `<div class="cal-mcell ${inMonth ? '' : 'out'} ${calSameDay(day, new Date()) ? 'today' : ''}" data-day="${calYmd(day)}"><div class="cal-mnum">${day.getDate()}</div>${chips}${more > 0 ? `<div class="cal-mmore">+${more}</div>` : ''}</div>`;
+    }
+    const wd = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(w => `<div class="cal-mwd">${w}</div>`).join('');
+    return `<div class="cal-month"><div class="cal-mwds">${wd}</div><div class="cal-mgrid">${cells}</div></div>`;
+  }
+
+  function calLabel() {
+    if (calView === 'day') return calAnchor.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    if (calView === 'week') {
+      const s = calStartOfWeek(calAnchor), e = calAddDays(s, 6);
+      const sStr = s.getMonth() === e.getMonth()
+        ? s.getDate()
+        : s.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+      return sStr + ' – ' + e.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+    }
+    return calAnchor.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
+  }
+
+  function renderCalendar() {
+    const host = document.getElementById('cal-host');
+    if (!host) return;
+    document.getElementById('cal-label').textContent = calLabel();
+    document.querySelectorAll('[data-cal-view]').forEach(b => b.classList.toggle('active', b.dataset.calView === calView));
+    if (calView === 'month') host.innerHTML = calRenderMonth();
+    else host.innerHTML = calRenderTimeGrid(calView === 'week' ? calWeekDays(calAnchor) : [calStartOfDay(calAnchor)]);
+  }
+
+  function calNav(dir) {
+    if (calView === 'day') calAnchor = calAddDays(calAnchor, dir);
+    else if (calView === 'week') calAnchor = calAddDays(calAnchor, 7 * dir);
+    else { const x = new Date(calAnchor); x.setMonth(x.getMonth() + dir); calAnchor = calStartOfDay(x); }
+    renderCalendar();
+  }
+
+  // ---- drag-drop: перенос сделки на новую дату/время ----
+  function calFmtMysql(d) {
+    const p = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':00';
+  }
+  // Минуты от полуночи по позиции курсора в колонке (снап к 30 мин)
+  function calComputeMinutes(colGrid, clientY) {
+    const rect = colGrid.getBoundingClientRect();
+    const topPx = clientY - rect.top - (calDrag ? calDrag.grabOffset : 0);
+    let slot = Math.round(topPx / CAL_SLOT_PX);
+    const rows = (calCurrentRange.endH - calCurrentRange.startH) * 2;
+    slot = Math.max(0, Math.min(rows - 1, slot));
+    return calCurrentRange.startH * 60 + slot * 30;
+  }
+  function calShowIndicator(colGrid, minutes) {
+    let ind = colGrid.querySelector('.cal-drop-indicator');
+    if (!ind) { ind = document.createElement('div'); ind.className = 'cal-drop-indicator'; colGrid.appendChild(ind); }
+    ind.style.top = ((minutes - calCurrentRange.startH * 60) / 30 * CAL_SLOT_PX) + 'px';
+  }
+  function calClearDropCues() {
+    document.querySelectorAll('.cal-drop-indicator').forEach(n => n.remove());
+    document.querySelectorAll('.cal-mcell.cal-drop-hover').forEach(n => n.classList.remove('cal-drop-hover'));
+  }
+
+  // Переносит next_date сделки. Оптимистично обновляет UI, при ошибке откатывает.
+  async function calMoveDeal(dealId, newStart) {
+    const idNum = Number(dealId);
+    const d = deals.find(x => Number(x.id) === idNum);
+    if (!d) return;
+    const newStr = calFmtMysql(newStart);
+    const cur = calParseDT(d.next_date);
+    if (cur && calFmtMysql(cur) === newStr) return; // ничего не изменилось
+    const prev = d.next_date;
+    d.next_date = newStr;       // оптимистичный апдейт
+    renderCalendar();
+    try {
+      setSync('syncing', 'Переносим…');
+      const existing = await rest('GET', '/records/deals/' + idNum);
+      const merged = Object.assign({}, existing, { next_date: newStr, updated_at: calFmtMysql(new Date()) });
+      delete merged.id;
+      await rest('PUT', '/records/deals/' + idNum, merged);
+      const inList = deals.find(x => Number(x.id) === idNum);
+      if (inList) { inList.next_date = newStr; inList.updated_at = merged.updated_at; }
+      if (currentModalDeal && Number(currentModalDeal.id) === idNum) currentModalDeal.next_date = newStr;
+      setSync('ok', 'Перенесено');
+      render();
+    } catch (e) {
+      d.next_date = prev;       // откат
+      renderCalendar();
+      setSync('error', 'Ошибка переноса: ' + e.message);
+      console.error('calMoveDeal:', e);
+      if (typeof showDialog === 'function') showDialog({ title: 'Не удалось перенести', message: e.message || 'Ошибка сети' });
+    }
+  }
+
   function render() {
     renderDashboard();
     renderKanban();
     renderDeals();
     renderLeads();
     renderQuotes();
+    renderCalendar();
     updateChecklistStatus();
   }
 
@@ -3146,7 +3608,7 @@
         <div>Стадия</div><div>${escapeHtml(d.stage || '—')}${d.open_date ? ' · ' + escapeHtml(String(d.open_date).slice(0, 10)) : ''}</div>
         ${d.source ? '<div>Источник</div><div>' + escapeHtml(d.source) + '</div>' : ''}
         <div>Сейчас на</div><div>${escapeHtml(d.current_system || '—')}</div>
-        <div>Потребности</div><div>${needs.map(escapeHtml).join(', ') || '—'}${d.needs_text ? '<br><span style="color:var(--text-secondary);font-size:13px">' + escapeHtml(d.needs_text) + '</span>' : ''}</div>
+        <div>Потребности</div><div>${needs.map(escapeHtml).join(', ') || '—'}${d.needs_text ? '<br><span style="color:var(--text-secondary);font-size:13px;white-space:pre-wrap">' + escapeHtml(d.needs_text) + '</span>' : ''}</div>
         <div>Температура</div><div>${tempBadge(d.temperature)}</div>
         <div>Контакт</div><div>${escapeHtml(d.contact_name || '—')}${d.contact_role ? ' · ' + escapeHtml(d.contact_role) : ''}${d.contact_is_dm ? ' · <strong>ЛПР</strong>' : ''}</div>
         <div>Оборот</div><div>${d.revenue ? Number(d.revenue).toLocaleString('ru-RU') + ' ₽/мес' : '—'}</div>
