@@ -134,6 +134,13 @@
     border-radius: var(--radius); font-size: 13px; cursor: pointer; background: var(--bg);
   }
   .filter-chip.active { background: var(--text); color: var(--bg); border-color: var(--text); font-weight: 500; }
+  /* Быстрый выбор даты следующего шага */
+  .next-quick { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .next-quick-chip {
+    padding: 5px 12px; font-size: 12px; border-radius: var(--radius);
+    border: 0.5px solid var(--border); background: var(--bg-secondary); color: var(--text-secondary);
+  }
+  .next-quick-chip:hover { border-color: var(--border-strong); background: var(--bg); color: var(--text); }
   /* Сортировка: segmented-control */
   .sort-control {
     display: inline-flex; border: 0.5px solid var(--border); border-radius: var(--radius);
@@ -220,6 +227,21 @@
     gap: 8px; margin-bottom: 10px;
   }
   @media (max-width: 720px) { .needs-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  /* Дополнительные контакты */
+  .contacts-section { margin-bottom: 1rem; }
+  .contacts-section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .contact-row {
+    display: grid; grid-template-columns: 1.4fr 1fr 1fr 1.2fr auto auto;
+    gap: 8px; align-items: center; margin-bottom: 8px;
+    padding: 10px; border: 0.5px solid var(--border); border-radius: var(--radius); background: var(--bg-secondary);
+  }
+  .contact-row .c-dm-wrap { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
+  .contact-row .c-del { padding: 6px 10px; color: var(--text-tertiary); }
+  .contact-row .c-del:hover { color: var(--danger); border-color: var(--danger); }
+  @media (max-width: 720px) {
+    .contact-row { grid-template-columns: 1fr 1fr; }
+    .contact-row .c-name { grid-column: 1 / -1; }
+  }
   .modal-bg {
     display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
     z-index: 100; align-items: flex-start; justify-content: center;
@@ -860,6 +882,17 @@
 
       <div class="row">
         <div class="field">
+          <label>Название компании <span style="color:var(--text-tertiary);font-weight:400">(для КП)</span></label>
+          <input type="text" id="f-company_name" placeholder='ООО «Ромашка»'>
+        </div>
+        <div class="field">
+          <label>ИНН <span style="color:var(--text-tertiary);font-weight:400">(для КП)</span></label>
+          <input type="text" id="f-inn" inputmode="numeric" placeholder="7701234567">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
           <label>Email</label>
           <input type="email" id="f-email" inputmode="email" autocomplete="email" placeholder="name@example.com">
         </div>
@@ -888,6 +921,14 @@
             <span>Этот контакт — ЛПР (сам принимает решения)</span>
           </label>
         </div>
+      </div>
+
+      <div class="contacts-section">
+        <div class="contacts-section-head">
+          <label style="margin:0">Дополнительные контакты</label>
+          <button type="button" id="f-contact-add" style="font-size:12px;padding:5px 12px">+ Добавить контакт</button>
+        </div>
+        <div id="f-contacts-list"></div>
       </div>
 
       <div class="row">
@@ -1154,6 +1195,14 @@
         <div class="field">
           <label>Следующий шаг — когда</label>
           <input type="datetime-local" id="f-next_date">
+          <div class="next-quick" id="next-quick">
+            <button type="button" class="next-quick-chip" data-quick="15m">Через 15 мин</button>
+            <button type="button" class="next-quick-chip" data-quick="30m">Через 30 мин</button>
+            <button type="button" class="next-quick-chip" data-quick="1h">Через час</button>
+            <button type="button" class="next-quick-chip" data-quick="2h">Через 2 часа</button>
+            <button type="button" class="next-quick-chip" data-quick="tomorrow">Завтра</button>
+            <button type="button" class="next-quick-chip" data-quick="week">Через неделю</button>
+          </div>
         </div>
       </div>
 
@@ -1275,35 +1324,6 @@
     <div class="actions">
       <button id="lead-btn-save" class="primary">Сохранить лид</button>
       <button id="lead-btn-cancel">Отмена</button>
-    </div>
-  </div>
-</div>
-
-<!-- ==================== KANBAN MOVE MODAL ==================== -->
-<div class="modal-bg" id="kanban-move-modal">
-  <div class="modal" style="max-width:400px">
-    <div class="modal-header">
-      <div class="modal-title" id="kanban-move-title">Перенос карточки</div>
-      <button class="close-btn" id="kanban-move-close">×</button>
-    </div>
-    <div class="field">
-      <label>Тип касания</label>
-      <select id="kanban-move-type">
-        <option value="call">Звонок</option>
-        <option value="meeting">Встреча</option>
-        <option value="demo">Демо</option>
-        <option value="proposal">Отправка КП</option>
-        <option value="invoice">Выставлен счёт</option>
-        <option value="note">Заметка</option>
-      </select>
-    </div>
-    <div class="field" style="margin-top:10px">
-      <label>Резюме разговора <span style="color:var(--danger)">*</span></label>
-      <textarea id="kanban-move-summary" rows="3" placeholder="Что обсудили, итог..."></textarea>
-    </div>
-    <div class="actions" style="margin-top:14px">
-      <button id="kanban-move-save" class="primary">Сохранить</button>
-      <button id="kanban-move-cancel">Отмена</button>
     </div>
   </div>
 </div>
@@ -1444,7 +1464,7 @@
   const LEAD_STATUS = 'Лид';
 
   const FIELDS = [
-    'client_name', 'phone', 'email',
+    'client_name', 'company_name', 'inn', 'phone', 'email',
     'contact_name', 'contact_role',
     'type', 'points', 'stage', 'open_date',
     'source',
@@ -1627,6 +1647,18 @@
     }
   }
 
+  // Доп. контакты — массив объектов {name, role, phone, email, is_dm}, хранится JSON-строкой в TEXT.
+  function parseContacts(raw) {
+    if (Array.isArray(raw)) return raw;
+    if (!raw) return [];
+    try {
+      const v = JSON.parse(raw);
+      return Array.isArray(v) ? v : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
   // Числовые и булевы поля — для них пустая строка '' = null
   // (HTML input type=number отдаёт '' если пусто, а MariaDB это не принимает)
   const NUMERIC_FIELDS = ['points', 'revenue', 'seller_id'];
@@ -1665,6 +1697,9 @@
 
       // needs — массив в JSON-строку
       if (k === 'needs' && Array.isArray(v)) v = JSON.stringify(v);
+
+      // contacts (доп. контакты) — массив объектов в JSON-строку
+      if (k === 'contacts' && Array.isArray(v)) v = JSON.stringify(v);
 
       // Булевы → 0/1 (но только если не null)
       if (BOOLEAN_FIELDS.indexOf(k) !== -1 && v !== null) v = v ? 1 : 0;
@@ -1716,14 +1751,14 @@
       const dealsArr = (dealsResp && dealsResp.records) || [];
       const quotesArr = (quotesResp && quotesResp.records) || [];
       // Парсим needs из строки в массив
-      dealsArr.forEach(d => { d.needs = parseNeeds(d.needs); });
+      dealsArr.forEach(d => { d.needs = parseNeeds(d.needs); d.contacts = parseContacts(d.contacts); });
       return { deals: dealsArr, quotes: quotesArr };
     }
 
     if (action === 'list') {
       const resp = await rest('GET', '/records/deals', null, { size: 1000, order: 'updated_at,desc' });
       const arr = (resp && resp.records) || [];
-      arr.forEach(d => { d.needs = parseNeeds(d.needs); });
+      arr.forEach(d => { d.needs = parseNeeds(d.needs); d.contacts = parseContacts(d.contacts); });
       return { deals: arr };
     }
 
@@ -1834,6 +1869,7 @@
       // Возвращаем обновлённую сделку с распарсенным needs
       const fresh = await rest('GET', '/records/deals/' + dealId);
       fresh.needs = parseNeeds(fresh.needs);
+      fresh.contacts = parseContacts(fresh.contacts);
       return { deal: fresh, activity_id: activityId };
     }
 
@@ -1854,6 +1890,7 @@
 
       const fresh = await rest('GET', '/records/deals/' + dealId);
       fresh.needs = parseNeeds(fresh.needs);
+      fresh.contacts = parseContacts(fresh.contacts);
       return { deal: fresh };
     }
 
@@ -2290,7 +2327,9 @@
   // если запрос похож на цифры — дополнительно ищем по цифрам телефона.
   function dealMatchesSearch(d, q) {
     if (!q) return true;
-    const haystack = [d.client_name, d.contact_name, d.email, d.current_system, d.phone, d.comment]
+    const extraContacts = (Array.isArray(d.contacts) ? d.contacts : [])
+      .map(c => [c.name, c.phone, c.email].filter(Boolean).join(' ')).join(' ');
+    const haystack = [d.client_name, d.company_name, d.inn, d.contact_name, d.email, d.current_system, d.phone, d.comment, extraContacts]
       .map(normalizeSearch).join(' \u0001 ');
     if (haystack.indexOf(q) !== -1) return true;
     // Если запрос содержит цифры — сверяемся ещё и по нормализованному телефону
@@ -2581,8 +2620,14 @@
     if (!host) return;
     document.getElementById('cal-label').textContent = calLabel();
     document.querySelectorAll('[data-cal-view]').forEach(b => b.classList.toggle('active', b.dataset.calView === calView));
+    // Запоминаем прокрутку сетки, чтобы после перерисовки (например, при переносе
+    // события) календарь не отбрасывало наверх, а позиция сохранялась.
+    const prevScroll = host.querySelector('.cal-scroll');
+    const prevTop = prevScroll ? prevScroll.scrollTop : 0;
     if (calView === 'month') host.innerHTML = calRenderMonth();
     else host.innerHTML = calRenderTimeGrid(calView === 'week' ? calWeekDays(calAnchor) : [calStartOfDay(calAnchor)]);
+    const newScroll = host.querySelector('.cal-scroll');
+    if (newScroll && prevTop) newScroll.scrollTop = prevTop;
   }
 
   function calNav(dir) {
@@ -3068,6 +3113,35 @@
   }
 
   // ==================== FORM ====================
+  // ====== Дополнительные контакты ======
+  const CONTACT_ROLES = ['Владелец', 'Управляющий', 'Бухгалтер', 'Администратор', 'IT', 'Другое'];
+
+  function addContactRow(contact) {
+    const c = contact || {};
+    const list = document.getElementById('f-contacts-list');
+    const row = document.createElement('div');
+    row.className = 'contact-row';
+    const roleOpts = ['<option value="">—</option>']
+      .concat(CONTACT_ROLES.map(r => `<option${(c.role === r) ? ' selected' : ''}>${r}</option>`))
+      .join('');
+    row.innerHTML = `
+      <input type="text" class="c-name" placeholder="Имя Фамилия" value="${escapeHtml(c.name || '')}">
+      <select class="c-role">${roleOpts}</select>
+      <input type="tel" class="c-phone" inputmode="tel" placeholder="Телефон" value="${escapeHtml(c.phone || '')}">
+      <input type="email" class="c-email" inputmode="email" placeholder="Email" value="${escapeHtml(c.email || '')}">
+      <label class="c-dm-wrap"><input type="checkbox" class="c-dm"${c.is_dm ? ' checked' : ''}> ЛПР</label>
+      <button type="button" class="c-del" title="Удалить контакт">✕</button>`;
+    row.querySelector('.c-del').addEventListener('click', () => row.remove());
+    list.appendChild(row);
+    return row;
+  }
+
+  document.getElementById('f-contact-add').addEventListener('click', () => {
+    const row = addContactRow();
+    const nameInput = row.querySelector('.c-name');
+    if (nameInput) nameInput.focus();
+  });
+
   function readForm() {
     const obj = { needs: [] };
     FIELDS.forEach(f => {
@@ -3076,6 +3150,16 @@
     });
     document.querySelectorAll('#f-needs .need-chip.checked').forEach(c => {
       obj.needs.push(c.dataset.value);
+    });
+    // Доп. контакты — собираем строки, пустые игнорируем
+    obj.contacts = [];
+    document.querySelectorAll('#f-contacts-list .contact-row').forEach(row => {
+      const name = row.querySelector('.c-name').value.trim();
+      const role = row.querySelector('.c-role').value;
+      const phone = row.querySelector('.c-phone').value.trim();
+      const email = row.querySelector('.c-email').value.trim();
+      const is_dm = row.querySelector('.c-dm').checked;
+      if (name || phone || email) obj.contacts.push({ name, role, phone, email, is_dm });
     });
     obj.contact_is_dm = document.getElementById('f-contact_is_dm').checked;
     obj.can_reanimate = document.getElementById('f-can_reanimate').checked;
@@ -3113,6 +3197,10 @@
     });
     document.getElementById('f-contact_is_dm').checked = !!deal.contact_is_dm;
     document.getElementById('f-can_reanimate').checked = !!deal.can_reanimate;
+    // Доп. контакты
+    const contactsList = document.getElementById('f-contacts-list');
+    contactsList.innerHTML = '';
+    (Array.isArray(deal.contacts) ? deal.contacts : parseContacts(deal.contacts)).forEach(c => addContactRow(c));
     document.querySelectorAll('input[name="fp_version"]').forEach(r => {
       r.checked = (String(deal.fp_version || '') === r.value);
     });
@@ -3141,6 +3229,7 @@
     document.querySelectorAll('#f-needs .need-chip').forEach(c => c.classList.remove('checked'));
     document.getElementById('f-contact_is_dm').checked = false;
     document.getElementById('f-can_reanimate').checked = false;
+    document.getElementById('f-contacts-list').innerHTML = '';
     document.querySelectorAll('input[name="fp_version"]').forEach(r => {
       r.checked = (r.value === '');
     });
@@ -3355,41 +3444,13 @@
     col.classList.remove('drag-over');
     const newStatus = col.dataset.status;
     if (!newStatus || newStatus === dragState.fromStatus) { dragState = null; return; }
-    openKanbanMoveModal(dragState.dealId, newStatus);
+    moveDealStatus(dragState.dealId, newStatus);
     dragState = null;
   });
 
-  // Mini-modal
-  let kanbanMovePending = null; // { dealId, newStatus }
-
-  function openKanbanMoveModal(dealId, newStatus) {
-    kanbanMovePending = { dealId, newStatus };
-    document.getElementById('kanban-move-title').textContent = 'Перенос в «' + newStatus + '»';
-    document.getElementById('kanban-move-type').value = 'call';
-    document.getElementById('kanban-move-summary').value = '';
-    document.getElementById('kanban-move-modal').classList.add('show');
-    setTimeout(() => document.getElementById('kanban-move-summary').focus(), 50);
-  }
-
-  function closeKanbanMoveModal() {
-    document.getElementById('kanban-move-modal').classList.remove('show');
-    kanbanMovePending = null;
-  }
-
-  document.getElementById('kanban-move-close').addEventListener('click', closeKanbanMoveModal);
-  document.getElementById('kanban-move-cancel').addEventListener('click', closeKanbanMoveModal);
-
-  document.getElementById('kanban-move-save').addEventListener('click', async () => {
-    if (!kanbanMovePending) return;
-    const actType = document.getElementById('kanban-move-type').value;
-    const actSummary = document.getElementById('kanban-move-summary').value.trim();
-    if (!actSummary) {
-      showToast('Заполните резюме разговора', true);
-      document.getElementById('kanban-move-summary').focus();
-      return;
-    }
-    const { dealId, newStatus } = kanbanMovePending;
-    closeKanbanMoveModal();
+  // Перенос карточки — сразу меняем этап, без запроса типа касания и резюзме.
+  // Смена этапа автоматически фиксируется в истории как служебная заметка.
+  async function moveDealStatus(dealId, newStatus) {
     setSync('syncing', 'Сохраняем...');
     try {
       const now = new Date();
@@ -3402,8 +3463,8 @@
         deal_id: Number(dealId),
         created_at: nowMysql,
         seller_id: currentUser ? currentUser.id : null,
-        type: actType,
-        summary: actSummary,
+        type: 'note',
+        summary: 'Перенос на этап «' + newStatus + '»',
         status_after: newStatus,
         temperature_after: existing.temperature || '',
         next_step: existing.next_step || '',
@@ -3411,15 +3472,44 @@
       });
       const fresh = await rest('GET', '/records/deals/' + dealId);
       fresh.needs = parseNeeds(fresh.needs);
+      fresh.contacts = parseContacts(fresh.contacts);
       mergeDealLocal(fresh);
       renderKanban();
       setSync('ok', 'Сохранено');
-      showToast('Сохранено');
+      showToast('Перенесено в «' + newStatus + '»');
     } catch (err) {
       setSync('error', 'Ошибка: ' + err.message);
       showToast('Ошибка: ' + err.message, true);
     }
-  });
+  }
+
+  // Быстрый выбор времени для «Следующий шаг — когда».
+  // 15м/30м/1ч/2ч — от текущего момента; «Завтра»/«Через неделю» — на 10:00 того дня.
+  (function initNextQuick() {
+    const wrap = document.getElementById('next-quick');
+    const input = document.getElementById('f-next_date');
+    if (!wrap || !input) return;
+    const fmtLocalDT = d => {
+      const p = n => String(n).padStart(2, '0');
+      return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) +
+             'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+    };
+    wrap.addEventListener('click', e => {
+      const btn = e.target.closest('.next-quick-chip');
+      if (!btn) return;
+      const d = new Date();
+      switch (btn.dataset.quick) {
+        case '15m': d.setMinutes(d.getMinutes() + 15); break;
+        case '30m': d.setMinutes(d.getMinutes() + 30); break;
+        case '1h':  d.setHours(d.getHours() + 1); break;
+        case '2h':  d.setHours(d.getHours() + 2); break;
+        case 'tomorrow': d.setDate(d.getDate() + 1); d.setHours(10, 0, 0, 0); break;
+        case 'week':     d.setDate(d.getDate() + 7); d.setHours(10, 0, 0, 0); break;
+      }
+      input.value = fmtLocalDT(d);
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  })();
 
   document.getElementById('btn-save').addEventListener('click', async () => {
     const data = readForm();
@@ -3611,6 +3701,7 @@
         <div>Потребности</div><div>${needs.map(escapeHtml).join(', ') || '—'}${d.needs_text ? '<br><span style="color:var(--text-secondary);font-size:13px;white-space:pre-wrap">' + escapeHtml(d.needs_text) + '</span>' : ''}</div>
         <div>Температура</div><div>${tempBadge(d.temperature)}</div>
         <div>Контакт</div><div>${escapeHtml(d.contact_name || '—')}${d.contact_role ? ' · ' + escapeHtml(d.contact_role) : ''}${d.contact_is_dm ? ' · <strong>ЛПР</strong>' : ''}</div>
+        ${(Array.isArray(d.contacts) ? d.contacts : []).length ? '<div>Доп. контакты</div><div>' + d.contacts.map(c => escapeHtml(c.name || '—') + (c.role ? ' · ' + escapeHtml(c.role) : '') + (c.is_dm ? ' · <strong>ЛПР</strong>' : '') + ([c.phone, c.email].filter(Boolean).length ? '<br><span style="color:var(--text-secondary);font-size:13px">' + [c.phone, c.email].filter(Boolean).map(escapeHtml).join(' · ') + '</span>' : '')).join('<br>') + '</div>' : ''}
         <div>Оборот</div><div>${d.revenue ? Number(d.revenue).toLocaleString('ru-RU') + ' ₽/мес' : '—'}</div>
         <div>Тариф</div><div>${escapeHtml(d.plan || '—')}</div>
         <div>Оборудование</div><div>${escapeHtml(d.hardware || '—')}</div>
@@ -3766,16 +3857,25 @@
             </div>
             ${canEdit ? `<button class="prop-edit-btn" data-proposal-id="${p.id}" data-status="${p.status}" style="font-size:12px;padding:4px 10px" title="Редактировать КП">✏️ Изменить</button>` : ''}
             <button class="prop-print-btn" data-proposal-id="${p.id}" style="font-size:12px;padding:4px 10px" title="Открыть печатную форму">📄 Печать</button>
+            <button class="prop-print-tariffs-btn" data-proposal-id="${p.id}" style="font-size:12px;padding:4px 10px" title="Печатная форма с блоком тарифов FUSIONPOS">📄 Печать + тарифы</button>
           </div>
         `;
       }).join('');
 
-      // Привязываем кнопки печати
+      // Привязываем кнопки печати (без тарифов)
       host.querySelectorAll('.prop-print-btn').forEach(btn => {
         btn.addEventListener('click', e => {
           e.stopPropagation();
           const pid = parseInt(btn.dataset.proposalId, 10);
-          printProposal(pid);
+          printProposal(pid, false);
+        });
+      });
+      // Привязываем кнопки печати с блоком тарифов
+      host.querySelectorAll('.prop-print-tariffs-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          const pid = parseInt(btn.dataset.proposalId, 10);
+          printProposal(pid, true);
         });
       });
       // Привязываем кнопки редактирования
@@ -3795,7 +3895,7 @@
   // ==================== ПЕЧАТНАЯ ФОРМА КП ====================
   // Открывается в новом окне. Пользователь нажимает Ctrl+P → Сохранить как PDF.
 
-  async function printProposal(proposalId) {
+  async function printProposal(proposalId, withTariffs) {
     let win = null;
     try {
       // Сразу открываем окно — иначе браузер может заблокировать как pop-up.
@@ -3832,7 +3932,7 @@
       // Продавец — из словаря usersById
       const seller = (proposal.seller_id && usersById[proposal.seller_id]) || null;
 
-      const html = buildProposalPrintHtml(proposal, items, deal, seller);
+      const html = buildProposalPrintHtml(proposal, items, deal, seller, withTariffs);
       // Перезаписываем содержимое окна
       win.document.open();
       win.document.write(html);
@@ -3850,11 +3950,12 @@
   }
 
   // Строит полный HTML печатной формы. Возвращает строку, которую можно записать в окно.
-  function buildProposalPrintHtml(proposal, items, deal, seller) {
+  function buildProposalPrintHtml(proposal, items, deal, seller, withTariffs) {
     const propNum = proposal.id;
     const dateStr = proposal.date ? new Date(proposal.date).toLocaleDateString('ru-RU') : '—';
     const validStr = proposal.valid_until ? new Date(proposal.valid_until).toLocaleDateString('ru-RU') : '';
-    const clientName = (deal && deal.client_name) ? deal.client_name : '—';
+    const clientName = (deal && (deal.company_name || deal.client_name)) ? (deal.company_name || deal.client_name) : '—';
+    const clientInn = (deal && deal.inn) ? String(deal.inn).trim() : '';
     const sellerName = seller ? (seller.full_name || seller.login) : '—';
     const sellerPhone = seller && seller.phone ? seller.phone : '';
     const sellerEmail = seller && seller.email ? seller.email : '';
@@ -3887,6 +3988,50 @@
       `;
     }).join('');
 
+    // Блок тарифов — вставляется после «Кому:» только в режиме «Печать + тарифы»
+    const tariffsHtml = withTariffs ? `
+<div class="tariffs">
+  <h3>Тарифы FUSIONPOS</h3>
+  <div class="cards">
+    <div class="tcard accent">
+      <div class="tlabel">Всё включено</div>
+      <div class="tprice">0,5% <span>с оборота</span></div>
+      <div class="tnote">Не больше 10 000 ₽/мес за точку · бесплатно, пока нет выручки</div>
+      <div class="tsum">
+        <div class="tsum-line"><b>✓</b> Весь основной функционал</div>
+        <div class="tsum-line"><b>✓</b> Все опции — без доплат</div>
+      </div>
+      <ul class="opts">
+        <li><span>Столы (план зала)</span><b>Включено</b></li>
+        <li><span>Экраны кухни</span><b>Включено</b></li>
+        <li><span>Мобильный официант</span><b>Включено</b></li>
+        <li><span>Касса самообслуживания</span><b>Включено</b></li>
+        <li><span>Несколько терминалов</span><b>Включено</b></li>
+        <li><span>API (1С, сайты, боты)</span><b>Включено</b></li>
+      </ul>
+    </div>
+    <div class="tcard">
+      <div class="tlabel">Стандарт</div>
+      <div class="tprice">2 190 ₽ <span>/мес за точку</span></div>
+      <div class="tnote">14 дней бесплатно · опции подключаются по необходимости</div>
+      <div class="tsum">
+        <div class="tsum-line"><b>✓</b> Весь основной функционал</div>
+        <div class="tsum-line"><em>+</em> Опции — за отдельную плату</div>
+      </div>
+      <ul class="opts">
+        <li><span>Столы (план зала)</span><em>+ 990 ₽</em></li>
+        <li><span>Экраны кухни</span><em>+ 990 ₽</em></li>
+        <li><span>Мобильный официант</span><em>+ 1 290 ₽</em></li>
+        <li><span>Касса самообслуживания</span><em>+ 1 290 ₽</em></li>
+        <li><span>Несколько терминалов</span><em>+ 1 290 ₽</em></li>
+        <li><span>API (1С, сайты, боты)</span><em>+ 990 ₽</em></li>
+      </ul>
+    </div>
+  </div>
+  <div class="tfoot">Основной функционал (касса, склад, меню, лояльность, онлайн-кассы 54-ФЗ, Честный знак, аналитика, облачная панель) входит в оба тарифа. Для сети — все точки в одной панели. Тариф можно сменить в любой момент.</div>
+</div>
+` : '';
+
     // Простой, чистый HTML с inline-стилями — независим от crm.html
     return `<!doctype html>
 <html lang="ru">
@@ -3897,6 +4042,8 @@
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; color: #222; max-width: 800px; margin: 0 auto; padding: 24px; font-size: 14px; line-height: 1.5; }
   .head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #222; padding-bottom: 12px; margin-bottom: 24px; }
   .head .brand { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+  .head .brand .brand-logo { height: 30px; width: auto; display: block; }
+  body.compact .head .brand .brand-logo { height: 26px; }
   .head .seller { text-align: right; font-size: 13px; color: #555; }
   .title { text-align: center; margin: 28px 0 8px; font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
   .subtitle { text-align: center; color: #555; margin-bottom: 24px; font-size: 13px; }
@@ -3919,21 +4066,70 @@
   .footer .signature { border-top: 1px solid #999; padding-top: 6px; min-width: 220px; text-align: center; color: #555; }
   .notes { font-size: 12px; color: #777; margin-top: 24px; line-height: 1.5; }
 
+  /* Блок тарифов FUSIONPOS */
+  .tariffs { margin: 18px 0 4px; }
+  .tariffs h3 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #222; margin: 0 0 10px; }
+  .tariffs .cards { display: flex; gap: 12px; }
+  .tariffs .tcard { flex: 1; border: 1px solid #ddd; border-radius: 8px; padding: 14px 16px; }
+  .tariffs .tcard.accent { border-color: #009CF3; }
+  .tariffs .tlabel { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #666; margin-bottom: 6px; }
+  .tariffs .tprice { font-size: 26px; font-weight: 800; line-height: 1; color: #111; }
+  .tariffs .tprice span { font-size: 13px; font-weight: 400; color: #555; }
+  .tariffs .tnote { font-size: 12px; color: #555; margin: 4px 0 10px; }
+  .tariffs .tsum { background: #f4f6f8; border-radius: 6px; padding: 7px 10px; margin-bottom: 8px; }
+  .tcard.accent .tsum { background: #e8f5fe; }
+  .tariffs .tsum-line { font-size: 12px; font-weight: 600; color: #222; display: flex; align-items: baseline; gap: 6px; padding: 1px 0; }
+  .tariffs .tsum-line b { color: #1D9E75; font-weight: 700; }
+  .tariffs .tsum-line em { color: #009CF3; font-style: normal; font-weight: 700; }
+  .tariffs ul { list-style: none; margin: 0; padding: 0; font-size: 12px; }
+  .tariffs ul li { padding: 2px 0; color: #333; }
+  .tariffs ul li b { color: #009CF3; }
+  .tariffs ul.opts li { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; border-top: 1px solid #eee; padding: 3px 0; }
+  .tariffs ul.opts li:first-child { border-top: 0; }
+  .tariffs ul.opts li span { color: #333; }
+  .tariffs ul.opts li b { color: #1D9E75; font-weight: 600; white-space: nowrap; }
+  .tariffs ul.opts li em { color: #555; font-style: normal; white-space: nowrap; }
+  .tariffs .tfoot { font-size: 11px; color: #777; margin-top: 10px; line-height: 1.4; }
+
   /* Печать */
   @media print {
     body { padding: 0; max-width: none; }
     @page { size: A4; margin: 18mm 16mm; }
+    .tariffs .tcard { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
+  /* Компактный режим, когда добавлен блок тарифов — чтобы 7 строк + тарифы влезли на 1 лист */
+  body.compact { font-size: 12px; }
+  body.compact .head { padding-bottom: 7px; margin-bottom: 10px; }
+  body.compact .brand { font-size: 19px; }
+  body.compact .title { margin: 8px 0 3px; font-size: 15px; }
+  body.compact .subtitle { margin-bottom: 9px; font-size: 12px; }
+  body.compact .meta { margin-bottom: 8px; padding: 6px 13px; }
+  body.compact .tariffs { margin: 9px 0 4px; }
+  body.compact .tariffs h3 { margin-bottom: 7px; }
+  body.compact .tariffs .tcard { padding: 9px 13px; }
+  body.compact .tariffs .tprice { font-size: 20px; }
+  body.compact .tariffs .tnote { margin: 3px 0 6px; font-size: 11px; }
+  body.compact .tariffs .tsum { padding: 5px 9px; margin-bottom: 6px; }
+  body.compact .tariffs .tsum-line { font-size: 11px; }
+  body.compact .tariffs ul { font-size: 10.5px; }
+  body.compact .tariffs ul li { padding: 1px 0; }
+  body.compact .tariffs ul.opts li { padding: 1.5px 0; }
+  body.compact .tariffs .tfoot { margin-top: 6px; }
+  body.compact .comment { margin: 8px 0; padding: 7px 13px; }
+  body.compact table.items { margin: 8px 0; font-size: 12px; }
+  body.compact table.items th, body.compact table.items td { padding: 3px 8px; }
+  body.compact .totals { margin: 9px 0 10px; }
+  body.compact .footer { margin-top: 14px; }
+  body.compact .notes { margin-top: 12px; }
 </style>
 </head>
-<body>
+<body class="${withTariffs ? 'compact' : ''}">
 
 <div class="head">
-  <div class="brand">FUSIONPOS</div>
+  <div class="brand"><svg class="brand-logo" viewBox="0 0 160 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0 3.87879V28.1212C0 30.2634 1.73659 32 3.87879 32H28.1212C30.2634 32 32 30.2634 32 28.1212V8.07619C32 6.56135 30.772 5.33333 29.2571 5.33333H29.181C27.7082 5.33333 26.5143 4.13943 26.5143 2.66667C26.5143 1.19391 25.3204 0 23.8476 0H3.87879C1.73659 0 0 1.73659 0 3.87879Z" fill="#009CF3"/><path fill-rule="evenodd" clip-rule="evenodd" d="M22.4494 10.7154C22.8832 10.7154 23.2349 10.3637 23.2349 9.92988V7.57335C23.2349 7.13953 22.8832 6.78784 22.4494 6.78784H14.5943H11.4523C11.0185 6.78784 10.6668 7.13952 10.6668 7.57334L10.6667 10.7154L10.6668 12.5419C10.6668 12.9757 11.0185 13.3274 11.4523 13.3274H13.8088C14.2426 13.3274 14.5943 12.9757 14.5943 12.5419V11.5009C14.5943 11.0671 14.946 10.7154 15.3798 10.7154L22.4494 10.7154ZM18.1293 19.356C18.5631 19.356 18.9148 19.0043 18.9148 18.5705V16.2139C18.9148 15.7801 18.5631 15.4284 18.1293 15.4284H14.5943H11.4524C11.0186 15.4284 10.6669 15.7801 10.6669 16.2139L10.6668 24.4618C10.6668 24.8956 11.0185 25.2473 11.4523 25.2473H13.8088C14.2426 25.2473 14.5943 24.8956 14.5943 24.4618V20.1415C14.5943 19.7077 14.946 19.356 15.3798 19.356L18.1293 19.356Z" fill="white"/><rect x="28.1212" width="3.87879" height="3.87879" rx="1.93939" fill="#009CF3"/><path d="M50.2024 7.96469C50.8589 7.96469 51.0707 8.17645 51.0707 8.83292V10.2517C51.0707 10.887 50.8589 11.0988 50.2024 11.0988H44.273V14.127H49.1436C49.8001 14.127 50.0118 14.3388 50.0118 14.9953V16.4141C50.0118 17.0494 49.8001 17.2612 49.1436 17.2612H44.273V22.1318C44.273 22.7882 44.0401 23 43.4048 23H41.6895C41.0542 23 40.8212 22.7882 40.8212 22.1318V8.83292C40.8212 8.17645 41.0542 7.96469 41.6895 7.96469H50.2024ZM56.6467 17.7906C56.6467 19.3153 57.5573 20.1835 59.3361 20.1835C61.1361 20.1835 62.0255 19.3153 62.0255 17.7906V8.83292C62.0255 8.17645 62.2373 7.96469 62.8938 7.96469H64.6091C65.2444 7.96469 65.4773 8.17645 65.4773 8.83292V17.7059C65.4773 21.1153 63.3597 23.3176 59.3361 23.3176C55.3338 23.3176 53.2161 21.1153 53.2161 17.7059V8.83292C53.2161 8.17645 53.4279 7.96469 54.0844 7.96469H55.7996C56.4349 7.96469 56.6467 8.17645 56.6467 8.83292V17.7906ZM67.8577 12.3906C67.8577 9.65881 69.933 7.64704 73.893 7.64704C76.9847 7.64704 78.5942 8.68469 79.5683 10.76C79.8647 11.3529 79.6953 11.6494 79.1024 11.9035L77.493 12.6023C76.9424 12.8565 76.7095 12.7506 76.3918 12.1788C75.9471 11.2894 75.2271 10.7812 73.893 10.7812C72.1565 10.7812 71.3942 11.2259 71.3942 12.2423C71.3942 13.3859 72.8553 13.6188 74.5706 13.8094C77.0483 14.1059 80.0553 14.7412 80.0553 18.4682C80.0553 21.3694 77.6624 23.3176 73.7659 23.3176C70.4624 23.3176 68.6412 22.1106 67.8153 19.8871C67.6036 19.2729 67.773 18.9976 68.3659 18.7859L69.9118 18.2353C70.5259 18.0023 70.7589 18.1082 71.0342 18.7435C71.4577 19.6541 72.4106 20.2047 73.7659 20.2047C75.5659 20.2047 76.5824 19.7388 76.5824 18.5318C76.5824 17.4729 75.2906 17.1765 73.7236 17.0071C71.1824 16.7106 67.8577 16.2871 67.8577 12.3906ZM82.3354 8.81175C82.3354 8.17645 82.5472 7.96469 83.1825 7.96469H84.9402C85.5755 7.96469 85.7872 8.17645 85.7872 8.81175V22.1529C85.7872 22.7882 85.5755 23 84.9402 23H83.1825C82.5472 23 82.3354 22.7882 82.3354 22.1529V8.81175ZM88.3952 13.3435C88.3952 9.82822 90.6399 7.64704 94.6423 7.64704C98.6658 7.64704 100.911 9.82822 100.911 13.3435V17.6212C100.911 21.1365 98.6658 23.3176 94.6423 23.3176C90.6399 23.3176 88.3952 21.1365 88.3952 17.6212V13.3435ZM97.4588 13.28C97.4588 11.6282 96.4423 10.8023 94.6423 10.8023C92.8635 10.8023 91.847 11.6282 91.847 13.28V17.6847C91.847 19.3365 92.8635 20.1623 94.6423 20.1623C96.4423 20.1623 97.4588 19.3365 97.4588 17.6847V13.28ZM114.862 7.96469C115.497 7.96469 115.709 8.17645 115.709 8.83292V22.1318C115.709 22.7882 115.497 23 114.862 23H113.146C112.723 23 112.49 22.8941 112.299 22.5976L108.149 16.2871C107.111 14.72 106.539 12.8988 106.37 12.327H106.222C106.349 12.9412 106.815 14.8259 106.815 17.0706V22.1318C106.815 22.7882 106.582 23 105.946 23H104.379C103.744 23 103.511 22.7882 103.511 22.1318V8.83292C103.511 8.17645 103.744 7.96469 104.379 7.96469H106.137C106.582 7.96469 106.772 8.09175 106.963 8.36704L111.198 14.7835C112.299 16.4353 112.744 18.0871 112.935 18.5741H113.104C112.892 17.9176 112.426 16.16 112.426 13.8941V8.83292C112.426 8.17645 112.638 7.96469 113.295 7.96469H114.862Z" fill="#009CF3"/><path d="M125.285 7.96469C128.44 7.96469 130.473 9.87057 130.473 13.047C130.473 16.2235 128.483 18.1082 125.285 18.1082H122.193V22.1318C122.193 22.7882 121.96 23 121.325 23H119.61C118.975 23 118.742 22.7882 118.742 22.1318V8.83292C118.742 8.17645 118.975 7.96469 119.61 7.96469H125.285ZM124.925 14.9529C126.153 14.9529 126.895 14.2541 126.895 13.047C126.895 11.84 126.175 11.0988 124.925 11.0988H122.193V14.9529H124.925ZM132.288 13.3435C132.288 9.82822 134.532 7.64704 138.535 7.64704C142.558 7.64704 144.803 9.82822 144.803 13.3435V17.6212C144.803 21.1365 142.558 23.3176 138.535 23.3176C134.532 23.3176 132.288 21.1365 132.288 17.6212V13.3435ZM141.351 13.28C141.351 11.6282 140.335 10.8023 138.535 10.8023C136.756 10.8023 135.739 11.6282 135.739 13.28V17.6847C135.739 19.3365 136.756 20.1623 138.535 20.1623C140.335 20.1623 141.351 19.3365 141.351 17.6847V13.28ZM146.874 12.3906C146.874 9.65881 148.949 7.64704 152.909 7.64704C156.001 7.64704 157.611 8.68469 158.585 10.76C158.881 11.3529 158.712 11.6494 158.119 11.9035L156.509 12.6023C155.959 12.8565 155.726 12.7506 155.408 12.1788C154.964 11.2894 154.244 10.7812 152.909 10.7812C151.173 10.7812 150.411 11.2259 150.411 12.2423C150.411 13.3859 151.872 13.6188 153.587 13.8094C156.065 14.1059 159.072 14.7412 159.072 18.4682C159.072 21.3694 156.679 23.3176 152.782 23.3176C149.479 23.3176 147.658 22.1106 146.832 19.8871C146.62 19.2729 146.789 18.9976 147.382 18.7859L148.928 18.2353C149.542 18.0023 149.775 18.1082 150.051 18.7435C150.474 19.6541 151.427 20.2047 152.782 20.2047C154.582 20.2047 155.599 19.7388 155.599 18.5318C155.599 17.4729 154.307 17.1765 152.74 17.0071C150.199 16.7106 146.874 16.2871 146.874 12.3906Z" fill="#1a1a1a"/></svg></div>
   <div class="seller">
     <div><strong>${escapeHtml(sellerName)}</strong></div>
-    ${sellerPhone ? '<div>Тел.: ' + escapeHtml(sellerPhone) + '</div>' : ''}
-    ${sellerEmail ? '<div>Email: ' + escapeHtml(sellerEmail) + '</div>' : ''}
+    ${(sellerPhone || sellerEmail) ? '<div>' + [sellerPhone ? 'Тел.: ' + escapeHtml(sellerPhone) : '', sellerEmail ? escapeHtml(sellerEmail) : ''].filter(Boolean).join(' &nbsp;·&nbsp; ') + '</div>' : ''}
   </div>
 </div>
 
@@ -3942,7 +4138,10 @@
 
 <div class="meta">
   <div class="row"><span class="lbl">Кому:</span><span><strong>${escapeHtml(clientName)}</strong></span></div>
+  ${clientInn ? '<div class="row"><span class="lbl">ИНН:</span><span>' + escapeHtml(clientInn) + '</span></div>' : ''}
 </div>
+
+${tariffsHtml}
 
 ${proposal.comment ? '<div class="comment">' + escapeHtml(proposal.comment) + '</div>' : ''}
 
@@ -3980,7 +4179,7 @@ ${proposal.comment ? '<div class="comment">' + escapeHtml(proposal.comment) + '<
   <div class="signature">подпись / печать</div>
 </div>
 
-${validStr ? `<div class="notes">Условия КП действуют до ${validStr}.</div>` : ''}
+${(validStr && !withTariffs) ? `<div class="notes">Условия КП действуют до ${validStr}.</div>` : ''}
 
 </body>
 </html>`;
@@ -4680,6 +4879,7 @@ ${validStr ? `<div class="notes">Условия КП действуют до ${v
       // Подгружаем свежие данные
       const fresh = await rest('GET', '/records/deals/' + newId);
       fresh.needs = parseNeeds(fresh.needs);
+      fresh.contacts = parseContacts(fresh.contacts);
       normalizeDeal(fresh);
       deals.unshift(fresh);
 
