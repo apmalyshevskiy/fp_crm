@@ -7,7 +7,6 @@ const partners = ref([])
 const loading = ref(true)
 const error = ref('')
 
-// --- форма ---
 const showForm = ref(false)
 const saving = ref(false)
 const blank = () => ({ name: '', contact: '', phone: '', email: '', city: '', comment: '' })
@@ -31,12 +30,7 @@ async function save() {
   error.value = ''
   try {
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ')
-    // id НЕ передаём — база назначит сама (AUTO_INCREMENT)
-    await db.create('partners', {
-      ...form.value,
-      created_at: now,
-      updated_at: now,
-    })
+    await db.create('partners', { ...form.value, created_at: now, updated_at: now })
     form.value = blank()
     showForm.value = false
     await load()
@@ -81,9 +75,12 @@ onMounted(load)
     <p v-else-if="partners.length === 0" class="muted">Партнёров пока нет.</p>
 
     <ul v-else class="list">
+      <!-- вся строка — ссылка на карточку партнёра /partners/{id} -->
       <li v-for="p in partners" :key="p.id">
-        <strong>{{ p.name || '(без названия)' }}</strong>
-        <span class="muted">· {{ p.city || '—' }} · {{ p.contact || '—' }}</span>
+        <router-link :to="`/partners/${p.id}`" class="row">
+          <strong>{{ p.name || '(без названия)' }}</strong>
+          <span class="muted">· {{ p.city || '—' }} · {{ p.contact || '—' }}</span>
+        </router-link>
       </li>
     </ul>
   </section>
@@ -99,5 +96,10 @@ onMounted(load)
 .muted { color: var(--text-tertiary); }
 .err { color: var(--danger); }
 .list { list-style: none; padding: 0; }
-.list li { padding: 12px 14px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; }
+.list li { margin-bottom: 8px; }
+.row {
+  display: block; padding: 12px 14px; text-decoration: none; color: inherit;
+  border: 1px solid var(--border); border-radius: 8px;
+}
+.row:hover { background: var(--bg-secondary); border-color: var(--gold); }
 </style>
