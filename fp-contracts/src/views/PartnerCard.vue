@@ -3,6 +3,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { db } from '../api/client'
+import { lookupByInn } from '../lib/inn'
 
 const route = useRoute()
 const router = useRouter()
@@ -58,6 +59,21 @@ const entBlank = () => ({
   bank_name: '', bank_account: '', corr_account: '', bik: '',
 })
 const entForm = ref(entBlank())
+
+// автозаполнение по ИНН (провайдер выбирается в lib/inn)
+const innLoading = ref(false)
+async function fillByInn() {
+  const inn = (entForm.value.inn || '').trim()
+  if (!inn) { alert('Сначала впишите ИНН.'); return }
+  innLoading.value = true; error.value = ''
+  try {
+    const { data } = await lookupByInn(inn)
+    // подставляем только то, что вернул сервис; банк/род. падеж не трогаем
+    entForm.value = { ...entForm.value, ...data }
+  } catch (e) {
+    error.value = `Не удалось получить данные по ИНН: ${e.message}`
+  } finally { innLoading.value = false }
+}
 
 async function loadEntities() {
   entities.value = await db.listWhere('entities', 'partner_id', id)
@@ -193,7 +209,14 @@ onMounted(load)
 
         <div class="group">Реквизиты</div>
         <div class="grid">
-          <label>ИНН<input v-model="entForm.inn" /></label>
+          <label>ИНН
+            <div class="inn-row">
+              <input v-model="entForm.inn" />
+              <button type="button" class="inn-btn" :disabled="innLoading" @click="fillByInn">
+                {{ innLoading ? 'Загрузка…' : 'Заполнить по ИНН' }}
+              </button>
+            </div>
+          </label>
           <label>КПП (у ИП нет)<input v-model="entForm.kpp" /></label>
           <label>ОГРН / ОГРНИП<input v-model="entForm.ogrn" /></label>
           <label>Дата регистрации<input type="date" v-model="entForm.ogrn_date" /></label>
@@ -268,6 +291,9 @@ button.danger:hover { background: #fbecea; }
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .grid label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text-secondary); }
 .grid label.wide { grid-column: 1 / -1; }
+.inn-row { display: flex; gap: 6px; }
+.inn-row input { flex: 1; }
+.inn-btn { white-space: nowrap; font-size: 13px; }
 .save { margin-top: 16px; }
 
 .ent-list { list-style: none; padding: 0; margin-top: 8px; }
