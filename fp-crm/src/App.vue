@@ -1,0 +1,43 @@
+<!-- src/App.vue — каркас CRM: шапка + вкладки -->
+<script setup>
+const tabs = [
+  { to: '/dashboard',  label: 'Дашборд' },
+  { to: '/leads',      label: 'Лиды' },
+  { to: '/kanban',     label: 'Канбан' },
+  { to: '/calendar',   label: 'Календарь' },
+  { to: '/deals',      label: 'Сделки' },
+  { to: '/quotes',     label: 'Цитаты боли' },
+  { to: '/rejections', label: 'Отказы' },
+]
+</script>
+
+<template>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand">FUSIONPOS · CRM</div>
+    </header>
+    <nav class="tabs">
+      <router-link v-for="t in tabs" :key="t.to" :to="t.to" class="tab">{{ t.label }}</router-link>
+    </nav>
+    <main class="content">
+      <router-view />
+    </main>
+  </div>
+</template>
+
+<style scoped>
+.shell { max-width: 1200px; margin: 0 auto; padding: 0 16px 40px; }
+.topbar { padding: 16px 0 12px; }
+.brand { font-weight: 600; letter-spacing: .2px; }
+.tabs {
+  display: flex; gap: 4px; border-bottom: 0.5px solid var(--border);
+  margin-bottom: 1.25rem; background: var(--bg); border-radius: var(--radius) var(--radius) 0 0;
+}
+.tab {
+  padding: 10px 14px; font-size: 14px; text-decoration: none;
+  color: var(--text-secondary); border-bottom: 2px solid transparent;
+}
+.tab:hover { color: var(--text); }
+.tab.router-link-active { color: var(--text); border-bottom-color: var(--text); font-weight: 500; }
+.content { background: transparent; }
+</style>
