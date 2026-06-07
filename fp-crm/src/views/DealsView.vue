@@ -82,7 +82,7 @@ function subDate(d) {
     </div>
 
     <div v-else>
-      <div v-for="d in list" :key="d.id" class="deal-row" :class="{ archived: isArchived(d) }" @click="selectedId = d.id">
+      <div v-for="d in list" :key="d.id" class="deal-row" :class="{ archived: isArchived(d) }" @click="d.id != null && (selectedId = d.id)">
         <div class="deal-main">
           <div class="deal-name">
             {{ d.client_name || 'Без названия' }}

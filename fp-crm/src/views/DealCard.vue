@@ -39,14 +39,17 @@ const EDITABLE = [
 function toLocal(s) { return s ? String(s).slice(0, 16).replace(' ', 'T') : '' }
 function fromLocal(v) { return v ? v.replace('T', ' ') + (v.length === 16 ? ':00' : '') : null }
 function numOrNull(v) { if (v === '' || v == null) return null; const n = Number(v); return isNaN(n) ? null : n }
-function nowMysql() { return new Date().toISOString().slice(0, 19).replace('T', ' ') }
+function nowMysql() { const d = new Date(); const p = n => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}` }
 
 async function load() {
+  const id = localId.value
+  if (id === null || id === undefined || id === '' || id === 'null') { loading.value = false; return }
   loading.value = true; error.value = ''
   try { deal.value = await db.get('deals', localId.value) }
   catch (e) { error.value = e.message } finally { loading.value = false }
 }
 async function loadActivity() {
+  if (!localId.value) { activity.value = []; return }
   try {
     activity.value = await db.list('activity', { filter: `deal_id,eq,${localId.value}`, order: 'created_at,desc', size: 200 })
   } catch { activity.value = [] }
@@ -169,7 +172,18 @@ async function saveEdit() {
       p.status = 'Первичный контакт'
       p.created_at = nowMysql()
       const created = await db.create('deals', p)
-      localId.value = (created && typeof created === 'object') ? created.id : created
+      // tqdev обычно возвращает новый id числом; подстрахуемся от объекта/строки/пустого ответа
+      let newId = (created && typeof created === 'object') ? created.id : created
+      if (newId === '' || newId === undefined || newId === 'null') newId = null
+      if (!newId) {
+        // сервер не вернул id (пустое тело) — берём самую свежую сделку
+        try { const recent = await db.list('deals', { order: 'id,desc', size: 1 }); newId = (recent && recent[0]) ? recent[0].id : null } catch (_) {}
+      }
+      if (!newId) {
+        // id так и не получили — сделка создана, обновим список и закроем
+        emit('saved'); emit('close'); return
+      }
+      localId.value = newId
       await load(); await loadActivity()
     } else {
       await putDeal(p)
@@ -303,7 +317,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
           </div>
 
           <!-- коммерческие предложения -->
-          <ProposalsBlock ref="proposalsRef" :deal-id="localId" :deal="deal" @open-form="openProposalForm" />
+          <ProposalsBlock v-if="localId && localId !== 'null'" ref="proposalsRef" :deal-id="localId" :deal="deal" @open-form="openProposalForm" />
 
           <!-- история касаний -->
           <div class="card">
