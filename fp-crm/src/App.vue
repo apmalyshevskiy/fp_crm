@@ -26,7 +26,7 @@ const tabs = [
 </template>
 
 <style scoped>
-.shell { max-width: 1200px; margin: 0 auto; padding: 0 16px 40px; }
+.shell { max-width: none; width: 100%; margin: 0; padding: 0 24px 40px; }
 .topbar { padding: 16px 0 12px; }
 .brand { font-weight: 600; letter-spacing: .2px; }
 .tabs {

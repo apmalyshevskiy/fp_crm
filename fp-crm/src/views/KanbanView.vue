@@ -128,8 +128,8 @@ async function moveDealStatus(dealId, newStatus) {
 <style scoped>
 .kanban-wrap { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 12px; align-items: flex-start; }
 .kanban-col {
-  flex: 0 0 var(--col-w, 234px);
-  width: var(--col-w, 234px); min-width: var(--col-w, 234px); max-width: var(--col-w, 234px);
+  flex: 0 0 var(--col-w, 250px);
+  width: var(--col-w, 250px); min-width: var(--col-w, 250px); max-width: var(--col-w, 250px);
   box-sizing: border-box;
   background: var(--bg-secondary); border: 0.5px solid var(--border);
   border-radius: var(--radius); padding: 10px; display: flex; flex-direction: column; min-height: 120px;
@@ -151,8 +151,8 @@ async function moveDealStatus(dealId, newStatus) {
 .kcard-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
 .kcard-name { font-weight: 500; font-size: 13px; min-width: 0; overflow-wrap: anywhere; }
 .kcard-type { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
-.kcard-foot { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 6px; }
-.kcard-step { font-size: 12px; color: var(--text-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.kcard-foot { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; margin-top: 6px; }
+.kcard-step { font-size: 12px; color: var(--text-tertiary); min-width: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .kcard-date { font-size: 12px; color: var(--text-secondary); white-space: nowrap; flex-shrink: 0; }
 .kcard-date.overdue { color: var(--danger); font-weight: 500; }
 .muted { color: var(--text-tertiary); }
