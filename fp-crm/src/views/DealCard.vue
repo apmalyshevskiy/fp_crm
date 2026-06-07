@@ -11,8 +11,14 @@ import {
   ALL_STATUSES, ACTIVITY_TYPES, ACTIVITY_LABEL,
 } from '../lib/deals'
 
-const props = defineProps({ id: { required: true } })
+const props = defineProps({
+  id: { default: null },                      // id существующей сделки
+  create: { type: Boolean, default: false },  // режим создания новой
+})
 const emit = defineEmits(['close', 'saved'])
+
+const localId = ref(props.id || null)          // текущий id (появится после создания)
+const showDelete = ref(false)                  // кнопка удаления (по секретной комбинации)
 
 const deal = ref(null)
 const activity = ref([])
@@ -37,12 +43,12 @@ function nowMysql() { return new Date().toISOString().slice(0, 19).replace('T', 
 
 async function load() {
   loading.value = true; error.value = ''
-  try { deal.value = await db.get('deals', props.id) }
+  try { deal.value = await db.get('deals', localId.value) }
   catch (e) { error.value = e.message } finally { loading.value = false }
 }
 async function loadActivity() {
   try {
-    activity.value = await db.list('activity', { filter: `deal_id,eq,${props.id}`, order: 'created_at,desc', size: 200 })
+    activity.value = await db.list('activity', { filter: `deal_id,eq,${localId.value}`, order: 'created_at,desc', size: 200 })
   } catch { activity.value = [] }
 }
 
@@ -60,6 +66,30 @@ function startEdit() {
 function toggleNeed(n) { const a = form.value.needs; const i = a.indexOf(n); i === -1 ? a.push(n) : a.splice(i, 1) }
 function addContact() { form.value.contacts.push({ name: '', role: '', phone: '', email: '', is_dm: false }) }
 function removeContact(i) { form.value.contacts.splice(i, 1) }
+
+// ---- создание новой сделки ----
+function blankForm() { const f = {}; for (const k of EDITABLE) f[k] = ''; f.needs = []; f.contacts = []; return f }
+function startNew() { form.value = blankForm(); mode.value = 'edit'; loading.value = false }
+function cancelEdit() { if (!localId.value) emit('close'); else mode.value = 'view' }
+
+// ---- архив / восстановление / удаление ----
+async function archiveDeal() {
+  saving.value = true; error.value = ''
+  try { await putDeal({ archived_at: nowMysql(), updated_at: nowMysql() }); await load(); emit('saved') }
+  catch (e) { error.value = e.message } finally { saving.value = false }
+}
+async function unarchiveDeal() {
+  saving.value = true; error.value = ''
+  try { await putDeal({ archived_at: null, updated_at: nowMysql() }); await load(); emit('saved') }
+  catch (e) { error.value = e.message } finally { saving.value = false }
+}
+async function deleteDeal() {
+  if (!localId.value) return
+  if (!confirm('Удалить сделку безвозвратно? История касаний и КП останутся в базе без привязки.')) return
+  saving.value = true; error.value = ''
+  try { await db.remove('deals', localId.value); emit('saved'); emit('close') }
+  catch (e) { error.value = e.message; saving.value = false }
+}
 
 // Краткое имя для поля: 'ООО "МВ"' для юрлица, 'ИП Фамилия Имя' для ИП.
 function shortOrgName(data) {
@@ -118,10 +148,10 @@ const checklistDone = computed(() => checklist.value.filter(i => i.done).length)
 // PATCH в PHP-CRUD-API падает с "Invalid parameter number" (PDOException -> 500),
 // поэтому правку карточки и смену статуса пишем через PUT, как в старом фронте.
 async function putDeal(partial) {
-  const existing = await db.get('deals', props.id)
+  const existing = await db.get('deals', localId.value)
   const merged = { ...existing, ...partial }
   delete merged.id
-  return db.replace('deals', props.id, merged)
+  return db.replace('deals', localId.value, merged)
 }
 
 async function saveEdit() {
@@ -134,8 +164,18 @@ async function saveEdit() {
     p.needs = JSON.stringify(form.value.needs || [])
     p.contacts = JSON.stringify((form.value.contacts || []).filter(c => c.name || c.phone || c.email))
     p.updated_at = nowMysql()
-    await putDeal(p)
-    mode.value = 'view'; await load(); emit('saved')
+    if (!localId.value) {
+      // создание новой сделки: статус по умолчанию + дата создания, POST
+      p.status = 'Первичный контакт'
+      p.created_at = nowMysql()
+      const created = await db.create('deals', p)
+      localId.value = (created && typeof created === 'object') ? created.id : created
+      await load(); await loadActivity()
+    } else {
+      await putDeal(p)
+      await load()
+    }
+    mode.value = 'view'; emit('saved')
   } catch (e) { error.value = e.message } finally { saving.value = false }
 }
 
@@ -174,7 +214,7 @@ async function saveTouch() {
     })
     // 2) создать запись касания
     const created = await db.create('activity', {
-      deal_id: props.id, created_at: stamp, seller_id: deal.value.seller_id || null,
+      deal_id: localId.value, created_at: stamp, seller_id: deal.value.seller_id || null,
       type: touch.value.type, summary: touch.value.summary || '',
       status_after: touch.value.status, temperature_after: touch.value.temperature || '',
       next_step: touch.value.next_step || '', next_date: nd,
@@ -184,7 +224,7 @@ async function saveTouch() {
     const painText = String(touch.value.pain_quote || '').trim()
     if (painText.length > 5) {
       await db.create('pain_quotes', {
-        deal_id: props.id, activity_id: activityId, client_name: deal.value.client_name || '',
+        deal_id: localId.value, activity_id: activityId, client_name: deal.value.client_name || '',
         venue_type: deal.value.type || '', current_system: deal.value.current_system || '',
         quote: painText, created_at: stamp,
       })
@@ -207,8 +247,18 @@ async function onProposalSaved() {
 }
 
 function onBackdrop() { if (mode.value === 'view' && !proposalForm.value.open) emit('close') }
-function onEsc(e) { if (e.key === 'Escape' && mode.value === 'view' && !proposalForm.value.open) emit('close') }
-onMounted(() => { load(); loadActivity(); window.addEventListener('keydown', onEsc) })
+function onEsc(e) {
+  if (e.key === 'Escape' && mode.value === 'view' && !proposalForm.value.open) emit('close')
+  // секретная комбинация: Ctrl+Shift+Backspace — показать кнопку «Удалить»
+  if (e.ctrlKey && e.shiftKey && (e.code === 'Backspace' || e.key === 'Backspace')) {
+    e.preventDefault(); showDelete.value = true
+  }
+}
+onMounted(() => {
+  if (props.create) startNew()
+  else { load(); loadActivity() }
+  window.addEventListener('keydown', onEsc)
+})
 onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
 </script>
 
@@ -216,7 +266,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
   <div class="overlay" @click.self="onBackdrop">
     <div class="modal">
       <div class="modal-head">
-        <h2>{{ deal?.client_name || 'Сделка' }}</h2>
+        <h2>{{ deal?.client_name || (props.create && !localId ? 'Новая сделка' : 'Сделка') }}</h2>
         <div class="badges">
           <span v-if="deal" class="status">{{ deal.status || '—' }}</span>
           <span v-if="deal && TEMP[deal.temperature]" class="temp" :class="TEMP[deal.temperature].cls">{{ TEMP[deal.temperature].label }}</span>
@@ -253,7 +303,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
           </div>
 
           <!-- коммерческие предложения -->
-          <ProposalsBlock ref="proposalsRef" :deal-id="props.id" :deal="deal" @open-form="openProposalForm" />
+          <ProposalsBlock ref="proposalsRef" :deal-id="localId" :deal="deal" @open-form="openProposalForm" />
 
           <!-- история касаний -->
           <div class="card">
@@ -384,14 +434,18 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
         <template v-if="mode === 'view'">
           <button class="primary" @click="startTouch">+ Новое касание</button>
           <button @click="startEdit">Редактировать карточку</button>
+          <button v-if="deal && !deal.archived_at" :disabled="saving" @click="archiveDeal">В архив</button>
+          <button v-else-if="deal" :disabled="saving" @click="unarchiveDeal">Восстановить из архива</button>
+          <span class="foot-spacer"></span>
+          <button v-if="showDelete" class="danger" :disabled="saving" @click="deleteDeal">Удалить</button>
         </template>
         <template v-else-if="mode === 'touch'">
           <button class="primary" :disabled="saving" @click="saveTouch">{{ saving ? 'Сохранение…' : 'Сохранить касание' }}</button>
           <button @click="mode = 'view'">Отмена</button>
         </template>
         <template v-else>
-          <button class="primary" :disabled="saving" @click="saveEdit">{{ saving ? 'Сохранение…' : 'Сохранить' }}</button>
-          <button @click="mode = 'view'">Отмена</button>
+          <button class="primary" :disabled="saving" @click="saveEdit">{{ saving ? 'Сохранение…' : (localId ? 'Сохранить' : 'Создать сделку') }}</button>
+          <button @click="cancelEdit">Отмена</button>
         </template>
       </div>
     </div>
@@ -418,6 +472,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
 .x.small { font-size: 18px; }
 .modal-body { padding: 16px 20px; overflow-y: auto; }
 .modal-foot { display: flex; gap: 8px; padding: 14px 20px; border-top: 0.5px solid var(--border); }
+.modal-foot .foot-spacer { flex: 1; }
+.modal-foot .danger { color: var(--danger); border-color: var(--danger); }
+.modal-foot .danger:hover { background: #fbecea; }
 .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 12px; }
 .card-title { font-weight: 600; font-size: 13px; color: var(--text-secondary); margin-bottom: 10px; }
 .field { display: flex; gap: 12px; padding: 6px 0; border-bottom: 0.5px solid var(--border); }

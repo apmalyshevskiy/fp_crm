@@ -13,6 +13,9 @@ const search = ref('')
 const filter = ref('all')
 const sort = ref('created')
 const selectedId = ref(null)   // открытая в модалке сделка
+const creating = ref(false)    // открыта модалка создания
+
+function closeCard() { selectedId.value = null; creating.value = false }
 
 const FILTERS = [
   { id: 'all', label: 'Все' }, { id: 'hot', label: 'Горячие' },
@@ -53,6 +56,11 @@ function subDate(d) {
 
 <template>
   <section>
+    <div class="top-row">
+      <h2>Сделки</h2>
+      <button class="primary new-deal" @click="creating = true">+ Новая сделка</button>
+    </div>
+
     <div class="search-row">
       <input v-model="search" type="search" placeholder="Поиск: название, телефон, ЛПР, система, ИНН…" />
     </div>
@@ -91,11 +99,21 @@ function subDate(d) {
     </div>
 
     <!-- модальная карточка -->
-    <DealCard v-if="selectedId" :key="selectedId" :id="selectedId" @close="selectedId = null" @saved="load" />
+    <DealCard
+      v-if="selectedId || creating"
+      :key="creating ? 'new' : selectedId"
+      :id="selectedId"
+      :create="creating"
+      @close="closeCard"
+      @saved="load" />
   </section>
 </template>
 
 <style scoped>
+.top-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.top-row h2 { margin: 0; }
+.new-deal { background: var(--text); color: var(--bg); border-color: var(--text); font-weight: 500; }
+.new-deal:hover { background: #000; }
 .search-row { margin-bottom: 12px; }
 .search-row input { width: 100%; padding: 9px 12px; border: 0.5px solid var(--border); border-radius: var(--radius); background: var(--bg); }
 .filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 16px; }
