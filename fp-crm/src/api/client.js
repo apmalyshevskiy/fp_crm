@@ -35,5 +35,8 @@ export const db = {
   get(table, id) { return request(`/records/${table}/${id}`) },
   create(table, row) { return request(`/records/${table}`, { method: 'POST', body: JSON.stringify(row) }) },
   update(table, id, row) { return request(`/records/${table}/${id}`, { method: 'PATCH', body: JSON.stringify(row) }) },
+  // PUT — полная замена записи. Для deals используем его вместо PATCH:
+  // PHP-CRUD-API падает на PATCH с малым числом полей ("Invalid parameter number" -> PDOException 500).
+  replace(table, id, row) { return request(`/records/${table}/${id}`, { method: 'PUT', body: JSON.stringify(row) }) },
   remove(table, id) { return request(`/records/${table}/${id}`, { method: 'DELETE' }) },
 }

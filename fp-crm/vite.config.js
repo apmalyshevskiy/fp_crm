@@ -17,6 +17,12 @@ export default defineConfig({
         auth: 'crm:Fusion2022',          // Basic для dev (та точка на сервере под Basic)
         rewrite: (p) => p.replace(/^\/api/, ''),
       },
+      // егрюл для автозаполнения по ИНН (src/lib/inn/egrul.js ходит на /egrul/<инн>.json)
+      '/egrul': {
+        target: 'https://egrul.org',
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/egrul/, ''),
+      },
     },
   },
 })

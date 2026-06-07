@@ -1,7 +1,10 @@
 <!-- src/views/DealCard.vue — модальная карточка: просмотр / правка / новое касание -->
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { db } from '../api/client'
+import { lookupByInn } from '../lib/inn'
+import ProposalsBlock from '../components/ProposalsBlock.vue'
+import ProposalForm from '../components/ProposalForm.vue'
 import {
   fmtDate, TEMP, parseJsonArray,
   TYPES, STAGES, SOURCES, ROLES, PLANS, HARDWARE, CURRENT_SYSTEMS, TEMPS, NEEDS,
@@ -17,6 +20,7 @@ const loading = ref(true)
 const error = ref('')
 const mode = ref('view')      // view | edit | touch
 const saving = ref(false)
+const innLoading = ref(false)
 const form = ref({})
 const touch = ref({})
 
@@ -57,6 +61,69 @@ function toggleNeed(n) { const a = form.value.needs; const i = a.indexOf(n); i =
 function addContact() { form.value.contacts.push({ name: '', role: '', phone: '', email: '', is_dm: false }) }
 function removeContact(i) { form.value.contacts.splice(i, 1) }
 
+// Краткое имя для поля: 'ООО "МВ"' для юрлица, 'ИП Фамилия Имя' для ИП.
+function shortOrgName(data) {
+  const name = String(data.legal_name || '').trim()
+  if (!name) return ''
+  const form = String(data.form || '').trim()
+  if (!form) return name
+  // если имя уже начинается с формы (egrul не нашёл кавычки и вернул «ООО МВ») — не дублируем
+  if (name.toUpperCase().startsWith(form.toUpperCase())) return name
+  return form === 'ИП' ? `${form} ${name}` : `${form} "${name}"`
+}
+
+// Автозаполнение по ИНН через провайдера из src/lib/inn (egrul.org).
+// Компанию перетираем данными реестра; название/контакт — только если пусто.
+async function fillByInn() {
+  const inn = String(form.value.inn || '').trim()
+  if (!/^(\d{10}|\d{12})$/.test(inn)) { error.value = 'ИНН должен быть 10 (юрлицо) или 12 (ИП) цифр'; return }
+  innLoading.value = true; error.value = ''
+  try {
+    const { data } = await lookupByInn(inn)
+    const orgName = shortOrgName(data)
+    if (orgName) {
+      form.value.company_name = orgName
+      if (!form.value.client_name?.trim()) form.value.client_name = orgName
+    }
+    if (data.signer_name && !form.value.contact_name?.trim()) form.value.contact_name = data.signer_name
+  } catch (e) {
+    error.value = `Не удалось получить данные по ИНН: ${e.message}`
+  } finally {
+    innLoading.value = false
+  }
+}
+
+// Чек-лист заполненности карточки (как в старом фронте). Реактивен на правку формы.
+const checklist = computed(() => {
+  const f = form.value
+  const pain = String(f.pain_quote || '').trim()
+  return [
+    { label: 'Тип заведения + точки', done: !!f.type && !!f.points },
+    { label: 'Стадия', done: !!f.stage },
+    { label: 'Что используют сейчас', done: !!f.current_system },
+    { label: 'Причина смены (дословно)', done: pain.length > 10 },
+    { label: 'Потребности отмечены', done: (f.needs?.length || 0) > 0 },
+    { label: 'Температура', done: !!f.temperature },
+    { label: 'ЛПР', done: !!(f.contacts?.some(c => c.is_dm) || f.contact_name) },
+    { label: 'Оборот точки', done: !!f.revenue },
+    { label: 'Тариф предложен', done: !!f.plan },
+    { label: 'Оборудование', done: !!f.hardware },
+    { label: 'Статус сделки', done: !!deal.value?.status },
+    { label: 'Следующий шаг + дата', done: !!f.next_step && !!f.next_date },
+  ]
+})
+const checklistDone = computed(() => checklist.value.filter(i => i.done).length)
+
+// Запись сделки = GET существующей + merge + PUT (полная замена).
+// PATCH в PHP-CRUD-API падает с "Invalid parameter number" (PDOException -> 500),
+// поэтому правку карточки и смену статуса пишем через PUT, как в старом фронте.
+async function putDeal(partial) {
+  const existing = await db.get('deals', props.id)
+  const merged = { ...existing, ...partial }
+  delete merged.id
+  return db.replace('deals', props.id, merged)
+}
+
 async function saveEdit() {
   if (!form.value.client_name?.trim()) { alert('Название обязательно'); return }
   saving.value = true; error.value = ''
@@ -67,7 +134,7 @@ async function saveEdit() {
     p.needs = JSON.stringify(form.value.needs || [])
     p.contacts = JSON.stringify((form.value.contacts || []).filter(c => c.name || c.phone || c.email))
     p.updated_at = nowMysql()
-    await db.update('deals', props.id, p)
+    await putDeal(p)
     mode.value = 'view'; await load(); emit('saved')
   } catch (e) { error.value = e.message } finally { saving.value = false }
 }
@@ -89,7 +156,10 @@ function quick(mins, days) {
   if (days) d.setDate(d.getDate() + days)
   if (mins) d.setMinutes(d.getMinutes() + mins)
   const p = n => String(n).padStart(2, '0')
-  touch.value.next_date = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
+  const v = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
+  // пишем в то поле, что сейчас редактируется: касание или правка карточки
+  if (mode.value === 'edit') form.value.next_date = v
+  else touch.value.next_date = v
 }
 
 async function saveTouch() {
@@ -98,7 +168,7 @@ async function saveTouch() {
     const stamp = nowMysql()
     const nd = fromLocal(touch.value.next_date)
     // 1) обновить сделку
-    await db.update('deals', props.id, {
+    await putDeal({
       status: touch.value.status, temperature: touch.value.temperature || null,
       next_step: touch.value.next_step, next_date: nd, updated_at: stamp,
     })
@@ -125,8 +195,19 @@ async function saveTouch() {
 
 function val(key) { const v = deal.value?.[key]; return (v === null || v === undefined || v === '') ? '—' : v }
 
-function onBackdrop() { if (mode.value === 'view') emit('close') }
-function onEsc(e) { if (e.key === 'Escape' && mode.value === 'view') emit('close') }
+// Форма создания/редактирования КП
+const proposalsRef = ref(null)
+const proposalForm = ref({ open: false, id: null })
+function openProposalForm(proposalId) { proposalForm.value = { open: true, id: proposalId } }
+async function onProposalSaved() {
+  proposalForm.value.open = false
+  await load()                          // статус сделки мог измениться (→ «КП отправлено»)
+  await loadActivity()                  // отправка КП добавляет запись в историю
+  proposalsRef.value?.reload()          // обновить список КП
+}
+
+function onBackdrop() { if (mode.value === 'view' && !proposalForm.value.open) emit('close') }
+function onEsc(e) { if (e.key === 'Escape' && mode.value === 'view' && !proposalForm.value.open) emit('close') }
 onMounted(() => { load(); loadActivity(); window.addEventListener('keydown', onEsc) })
 onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
 </script>
@@ -170,6 +251,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
             <div class="field"><span class="lbl">Шаг</span>{{ val('next_step') }}</div>
             <div class="field"><span class="lbl">Дата</span>{{ fmtDate(deal.next_date) }}</div>
           </div>
+
+          <!-- коммерческие предложения -->
+          <ProposalsBlock ref="proposalsRef" :deal-id="props.id" :deal="deal" @open-form="openProposalForm" />
 
           <!-- история касаний -->
           <div class="card">
@@ -221,7 +305,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
               <label>Название *<input v-model="form.client_name" /></label>
               <label>Телефон<input v-model="form.phone" /></label>
               <label>Компания<input v-model="form.company_name" /></label>
-              <label>ИНН<input v-model="form.inn" /></label>
+              <label>ИНН
+                <div class="inn-row">
+                  <input v-model="form.inn" inputmode="numeric" />
+                  <button type="button" class="mini" :disabled="innLoading" @click="fillByInn">{{ innLoading ? '…' : 'Заполнить' }}</button>
+                </div>
+              </label>
               <label>Email<input v-model="form.email" /></label>
               <label>Контактное лицо<input v-model="form.contact_name" /></label>
               <label>Должность ЛПР<select v-model="form.contact_role"><option value="">—</option><option v-for="r in ROLES" :key="r">{{ r }}</option></select></label>
@@ -264,12 +353,29 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
             <div class="card-title">Следующий шаг</div>
             <div class="grid">
               <label>Шаг<input v-model="form.next_step" /></label>
-              <label>Когда<input type="datetime-local" v-model="form.next_date" /></label>
+              <label>Когда<input type="datetime-local" v-model="form.next_date" />
+                <div class="quick">
+                  <button type="button" class="mini" @click="quick(15)">+15 мин</button>
+                  <button type="button" class="mini" @click="quick(30)">+30 мин</button>
+                  <button type="button" class="mini" @click="quick(60)">+1 час</button>
+                  <button type="button" class="mini" @click="quick(120)">+2 часа</button>
+                  <button type="button" class="mini" @click="quick(0, 1)">Завтра</button>
+                  <button type="button" class="mini" @click="quick(0, 7)">Через неделю</button>
+                </div>
+              </label>
             </div>
           </div>
           <div class="card">
             <div class="card-title">Комментарий</div>
             <label class="block"><textarea v-model="form.comment" rows="3"></textarea></label>
+          </div>
+          <div class="card">
+            <div class="card-title">Заполненность карточки · {{ checklistDone }}/{{ checklist.length }}</div>
+            <div class="checklist">
+              <div v-for="i in checklist" :key="i.label" class="check-item" :class="{ done: i.done }">
+                <span class="icon"></span>{{ i.label }}
+              </div>
+            </div>
           </div>
         </template>
       </div>
@@ -289,6 +395,14 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
         </template>
       </div>
     </div>
+
+    <ProposalForm
+      v-if="proposalForm.open"
+      :deal="deal"
+      :proposal-id="proposalForm.id"
+      @close="proposalForm.open = false"
+      @saved="onProposalSaved"
+    />
   </div>
 </template>
 
@@ -321,7 +435,7 @@ input, select, textarea { font: inherit; padding: 7px 10px; border: 0.5px solid 
 .needs-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
 @media (max-width: 720px) { .needs-grid { grid-template-columns: repeat(2, 1fr); } }
 .need-chip { text-align: left; font-size: 12px; padding: 7px 10px; border-radius: 999px; background: var(--bg); border: 0.5px solid var(--border); }
-.need-chip.on { background: var(--gold); border-color: var(--gold); color: #fff; }
+.need-chip.on { background: var(--text); border-color: var(--text); color: var(--bg); font-weight: 500; }
 .quick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .banner { background: var(--cold-bg); color: var(--cold-text); padding: 10px 14px; border-radius: var(--radius); font-size: 13px; margin-bottom: 12px; }
 .act { padding: 8px 0; border-bottom: 0.5px solid var(--border); }
@@ -331,4 +445,22 @@ input, select, textarea { font: inherit; padding: 7px 10px; border: 0.5px solid 
 .act-sum { margin: 4px 0 0 14px; color: var(--text-secondary); font-size: 13px; }
 .muted { color: var(--text-tertiary); }
 .err { color: var(--danger); }
+
+/* Поле ИНН с кнопкой автозаполнения */
+.inn-row { display: flex; gap: 6px; align-items: center; }
+.inn-row input { flex: 1; min-width: 0; }
+.inn-row .mini { white-space: nowrap; }
+
+/* Кнопки действий в подвале карточки — чёрные, как в старом фронте */
+.modal-foot .primary { background: var(--text); color: var(--bg); border-color: var(--text); font-weight: 500; }
+.modal-foot .primary:hover { background: #000; border-color: #000; }
+
+/* Чек-лист заполненности */
+.checklist { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px; font-size: 13px; }
+.check-item { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); }
+.check-item.done { color: var(--text); }
+.check-item .icon { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--text-tertiary, #9a9a93); display: inline-block; flex-shrink: 0; }
+.check-item.done .icon { background: var(--success, #1D9E75); border-color: var(--success, #1D9E75); position: relative; }
+.check-item.done .icon::after { content: ''; position: absolute; left: 4px; top: 1px; width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+@media (max-width: 720px) { .checklist { grid-template-columns: 1fr; } }
 </style>
