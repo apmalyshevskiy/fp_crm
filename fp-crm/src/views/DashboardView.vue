@@ -3,16 +3,19 @@
 import { ref, computed, onMounted } from 'vue'
 import { db } from '../api/client'
 import { isArchived, isLead, isDeal, isOverdue, fmtDate, TEMP } from '../lib/deals'
+import DealCard from './DealCard.vue'
 
 const deals = ref([])
 const loading = ref(true)
 const error = ref('')
+const selectedId = ref(null)
 
-onMounted(async () => {
-  try {
-    deals.value = await db.list('deals', { size: 1000, order: 'updated_at,desc' })
-  } catch (e) { error.value = e.message } finally { loading.value = false }
-})
+async function load() {
+  loading.value = true
+  try { deals.value = await db.list('deals', { size: 1000, order: 'updated_at,desc' }) }
+  catch (e) { error.value = e.message } finally { loading.value = false }
+}
+onMounted(load)
 
 const active = computed(() => deals.value.filter(isDeal))
 
@@ -48,7 +51,7 @@ const upcoming = computed(() =>
       <div class="section-title">Ближайшие follow-up</div>
       <div v-if="upcoming.length === 0" class="empty">Нет запланированных follow-up</div>
       <div v-else>
-        <div v-for="d in upcoming" :key="d.id" class="deal-row">
+        <div v-for="d in upcoming" :key="d.id" class="deal-row" @click="selectedId = d.id">
           <div class="deal-main">
             <div class="deal-name">{{ d.client_name || 'Без названия' }}</div>
             <div class="deal-meta">{{ d.next_step || '—' }}</div>
@@ -60,6 +63,8 @@ const upcoming = computed(() =>
         </div>
       </div>
     </template>
+
+    <DealCard v-if="selectedId" :key="selectedId" :id="selectedId" @close="selectedId = null" @saved="load" />
   </section>
 </template>
 
@@ -76,6 +81,8 @@ const upcoming = computed(() =>
   background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius);
   padding: 12px 14px; margin-bottom: 8px;
 }
+.deal-row { cursor: pointer; }
+.deal-row:hover { border-color: var(--border-strong); }
 .deal-main { flex: 1; min-width: 0; }
 .deal-name { font-weight: 500; }
 .deal-meta { font-size: 13px; color: var(--text-secondary); }

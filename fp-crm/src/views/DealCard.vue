@@ -14,6 +14,7 @@ import {
 const props = defineProps({
   id: { default: null },                      // id существующей сделки
   create: { type: Boolean, default: false },  // режим создания новой
+  createStatus: { type: String, default: 'Первичный контакт' }, // статус для новой записи
 })
 const emit = defineEmits(['close', 'saved'])
 
@@ -76,6 +77,12 @@ function startNew() { form.value = blankForm(); mode.value = 'edit'; loading.val
 function cancelEdit() { if (!localId.value) emit('close'); else mode.value = 'view' }
 
 // ---- архив / восстановление / удаление ----
+async function acceptLead() {
+  if (!confirm('Принять этот лид в работу? Статус станет «Первичный контакт», лид станет сделкой.')) return
+  saving.value = true; error.value = ''
+  try { await putDeal({ status: 'Первичный контакт', updated_at: nowMysql() }); await load(); emit('saved') }
+  catch (e) { error.value = e.message } finally { saving.value = false }
+}
 async function archiveDeal() {
   saving.value = true; error.value = ''
   try { await putDeal({ archived_at: nowMysql(), updated_at: nowMysql() }); await load(); emit('saved') }
@@ -169,7 +176,7 @@ async function saveEdit() {
     p.updated_at = nowMysql()
     if (!localId.value) {
       // создание новой сделки: статус по умолчанию + дата создания, POST
-      p.status = 'Первичный контакт'
+      p.status = props.createStatus
       p.created_at = nowMysql()
       const created = await db.create('deals', p)
       // tqdev обычно возвращает новый id числом; подстрахуемся от объекта/строки/пустого ответа
@@ -446,7 +453,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
 
       <div v-if="!loading && !error" class="modal-foot">
         <template v-if="mode === 'view'">
-          <button class="primary" @click="startTouch">+ Новое касание</button>
+          <button v-if="deal && deal.status === 'Лид'" class="primary" :disabled="saving" @click="acceptLead">🤝 Принять в работу</button>
+          <button v-if="deal && deal.status === 'Лид'" @click="startTouch">+ Новое касание</button>
+          <button v-else class="primary" @click="startTouch">+ Новое касание</button>
           <button @click="startEdit">Редактировать карточку</button>
           <button v-if="deal && !deal.archived_at" :disabled="saving" @click="archiveDeal">В архив</button>
           <button v-else-if="deal" :disabled="saving" @click="unarchiveDeal">Восстановить из архива</button>

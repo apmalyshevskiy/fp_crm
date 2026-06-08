@@ -98,3 +98,16 @@ export const ACTIVITY_TYPES = [
   { value: 'invoice', label: 'Выставлен счёт' }, { value: 'note', label: 'Заметка' },
 ]
 export const ACTIVITY_LABEL = Object.fromEntries(ACTIVITY_TYPES.map(t => [t.value, t.label]))
+
+// дней с последнего касания (по updated_at, иначе created_at)
+export function daysSinceTouch(d) {
+  const t = d.updated_at || d.created_at
+  if (!t) return null
+  const ms = Date.now() - new Date(String(t).replace(' ', 'T')).getTime()
+  return Math.max(0, Math.floor(ms / 86400000))
+}
+// лид без касаний: created_at ≈ updated_at (никто не трогал)
+export function isFreshLead(d) {
+  if (!d.created_at || !d.updated_at) return true
+  return Math.abs(new Date(String(d.updated_at).replace(' ','T')) - new Date(String(d.created_at).replace(' ','T'))) < 60000
+}
