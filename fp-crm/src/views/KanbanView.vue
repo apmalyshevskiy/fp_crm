@@ -3,6 +3,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { db } from '../api/client'
 import { isDeal, isOverdue, fmtDate, TEMP, FUNNEL_STATUSES, SIDE_STATUSES } from '../lib/deals'
+import { currentUserId } from '../lib/users'
 import DealCard from './DealCard.vue'
 
 const deals = ref([])
@@ -43,7 +44,31 @@ function onDragStart(id, e) {
   draggedId.value = id
   if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', String(id)) } catch (_) {} }
 }
-function onDragEnd() { draggedId.value = null; dragOver.value = null }
+function onDragEnd() { draggedId.value = null; dragOver.value = null; stopScroll() }
+
+// авто-прокрутка доски при наведении курсора к краю (и при перетаскивании)
+const wrap = ref(null)
+let scrollRAF = null
+let scrollVel = 0
+function edgeScrollFrom(clientX) {
+  if (!wrap.value) { scrollVel = 0; return }
+  const rect = wrap.value.getBoundingClientRect()
+  const edge = 50, max = 20
+  if (clientX > rect.right - edge) scrollVel = Math.ceil((clientX - (rect.right - edge)) / edge * max)
+  else if (clientX < rect.left + edge) scrollVel = -Math.ceil(((rect.left + edge) - clientX) / edge * max)
+  else scrollVel = 0
+  if (scrollVel && !scrollRAF) {
+    const step = () => {
+      if (!scrollVel) { scrollRAF = null; return }
+      wrap.value.scrollLeft += scrollVel
+      scrollRAF = requestAnimationFrame(step)
+    }
+    scrollRAF = requestAnimationFrame(step)
+  }
+}
+function onWrapMouseMove(e) { edgeScrollFrom(e.clientX) }
+function onWrapDragOver(e) { edgeScrollFrom(e.clientX) }
+function stopScroll() { scrollVel = 0; if (scrollRAF) { cancelAnimationFrame(scrollRAF); scrollRAF = null } }
 async function onDrop(status) {
   const id = draggedId.value
   dragOver.value = null; draggedId.value = null
@@ -65,7 +90,7 @@ async function moveDealStatus(dealId, newStatus) {
     delete merged.id
     await db.replace('deals', dealId, merged)
     await db.create('activity', {
-      deal_id: Number(dealId), created_at: stamp, seller_id: existing.seller_id || null,
+      deal_id: Number(dealId), created_at: stamp, seller_id: currentUserId() || existing.seller_id || null,
       type: 'note', summary: `Перенос на этап «${newStatus}»`,
       status_after: newStatus, temperature_after: existing.temperature || '',
       next_step: existing.next_step || '', next_date: existing.next_date || null,
@@ -83,7 +108,7 @@ async function moveDealStatus(dealId, newStatus) {
     <p v-if="loading" class="muted">Загрузка…</p>
     <p v-else-if="error" class="err">Ошибка: {{ error }}</p>
 
-    <div v-else class="kanban-wrap">
+    <div v-else class="kanban-wrap" ref="wrap" @dragover="onWrapDragOver" @mousemove="onWrapMouseMove" @mouseleave="stopScroll">
       <div
         v-for="status in COLUMNS"
         :key="status"

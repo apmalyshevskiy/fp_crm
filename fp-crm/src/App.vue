@@ -1,5 +1,8 @@
 <!-- src/App.vue — каркас CRM: шапка + вкладки -->
 <script setup>
+import { onMounted } from 'vue'
+import { userStore, initUsers } from './lib/users'
+onMounted(initUsers)
 const tabs = [
   { to: '/dashboard',  label: 'Дашборд' },
   { to: '/leads',      label: 'Лиды' },
@@ -15,6 +18,7 @@ const tabs = [
   <div class="shell">
     <header class="topbar">
       <div class="brand">FUSIONPOS · CRM</div>
+      <div v-if="userStore.currentUser" class="whoami">Вы: <b>{{ userStore.currentUser.full_name || userStore.currentUser.login }}</b></div>
     </header>
     <nav class="tabs">
       <router-link v-for="t in tabs" :key="t.to" :to="t.to" class="tab">{{ t.label }}</router-link>
@@ -27,7 +31,9 @@ const tabs = [
 
 <style scoped>
 .shell { max-width: none; width: 100%; margin: 0; padding: 0 24px 40px; }
-.topbar { padding: 16px 0 12px; }
+.topbar { padding: 16px 0 12px; display: flex; align-items: center; justify-content: space-between; }
+.whoami { font-size: 13px; color: var(--text-secondary); }
+.whoami b { color: var(--text); font-weight: 600; }
 .brand { font-weight: 600; letter-spacing: .2px; }
 .tabs {
   display: flex; gap: 4px; border-bottom: 0.5px solid var(--border);

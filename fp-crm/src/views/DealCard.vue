@@ -10,6 +10,7 @@ import {
   TYPES, STAGES, SOURCES, ROLES, PLANS, HARDWARE, CURRENT_SYSTEMS, TEMPS, NEEDS,
   ALL_STATUSES, ACTIVITY_TYPES, ACTIVITY_LABEL,
 } from '../lib/deals'
+import { userName, currentUserId } from '../lib/users'
 
 const props = defineProps({
   id: { default: null },                      // id существующей сделки
@@ -178,6 +179,7 @@ async function saveEdit() {
       // создание новой сделки: статус по умолчанию + дата создания, POST
       p.status = props.createStatus
       p.created_at = nowMysql()
+      p.seller_id = currentUserId()
       const created = await db.create('deals', p)
       // tqdev обычно возвращает новый id числом; подстрахуемся от объекта/строки/пустого ответа
       let newId = (created && typeof created === 'object') ? created.id : created
@@ -235,7 +237,7 @@ async function saveTouch() {
     })
     // 2) создать запись касания
     const created = await db.create('activity', {
-      deal_id: localId.value, created_at: stamp, seller_id: deal.value.seller_id || null,
+      deal_id: localId.value, created_at: stamp, seller_id: currentUserId() || deal.value.seller_id || null,
       type: touch.value.type, summary: touch.value.summary || '',
       status_after: touch.value.status, temperature_after: touch.value.temperature || '',
       next_step: touch.value.next_step || '', next_date: nd,
@@ -315,6 +317,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
             <div class="field"><span class="lbl">Точек</span>{{ val('points') }}</div>
             <div class="field"><span class="lbl">Выручка, ₽/мес</span>{{ val('revenue') }}</div>
             <div class="field"><span class="lbl">Текущая система</span>{{ val('current_system') }}</div>
+            <div class="field"><span class="lbl">Продавец</span>{{ userName(deal.seller_id) || '—' }}</div>
             <div class="field"><span class="lbl">Потребности</span>{{ parseJsonArray(deal.needs).join(', ') || '—' }}</div>
           </div>
           <div class="card">
@@ -335,6 +338,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
                 <span class="dot"></span>
                 <strong>{{ ACTIVITY_LABEL[a.type] || a.type }}</strong>
                 <span class="muted">· {{ fmtDate(a.created_at) }}</span>
+                <span v-if="userName(a.seller_id)" class="muted">· {{ userName(a.seller_id) }}</span>
                 <span v-if="a.status_after" class="muted">· → {{ a.status_after }}</span>
               </div>
               <div v-if="a.summary" class="act-sum">{{ a.summary }}</div>
