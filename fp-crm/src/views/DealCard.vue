@@ -359,15 +359,17 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
             <label class="block">Новая цитата боли (необязательно — добавится в Pain Quotes)<textarea v-model="touch.pain_quote" rows="2"></textarea></label>
             <div class="grid">
               <label>Следующий шаг — что<input v-model="touch.next_step" /></label>
-              <label>Когда<input type="datetime-local" v-model="touch.next_date" /></label>
-            </div>
-            <div class="quick">
-              <button type="button" class="mini" @click="quick(15)">+15 мин</button>
-              <button type="button" class="mini" @click="quick(30)">+30 мин</button>
-              <button type="button" class="mini" @click="quick(60)">+1 час</button>
-              <button type="button" class="mini" @click="quick(120)">+2 часа</button>
-              <button type="button" class="mini" @click="quick(0, 1)">Завтра</button>
-              <button type="button" class="mini" @click="quick(0, 7)">Через неделю</button>
+              <label>Когда<input type="datetime-local" v-model="touch.next_date" />
+                <div class="quick">
+                  <button type="button" class="mini" @click="quick(15)">+15 мин</button>
+                  <button type="button" class="mini" @click="quick(30)">+30 мин</button>
+                  <button type="button" class="mini" @click="quick(60)">+1 час</button>
+                  <button type="button" class="mini" @click="quick(120)">+2 часа</button>
+                  <button type="button" class="mini" @click="quick(0, 1)">Завтра</button>
+                  <button type="button" class="mini" @click="quick(0, 2)">+2 дня</button>
+                  <button type="button" class="mini" @click="quick(0, 7)">Через неделю</button>
+                </div>
+              </label>
             </div>
           </div>
         </template>
@@ -435,6 +437,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
                   <button type="button" class="mini" @click="quick(60)">+1 час</button>
                   <button type="button" class="mini" @click="quick(120)">+2 часа</button>
                   <button type="button" class="mini" @click="quick(0, 1)">Завтра</button>
+                  <button type="button" class="mini" @click="quick(0, 2)">+2 дня</button>
                   <button type="button" class="mini" @click="quick(0, 7)">Через неделю</button>
                 </div>
               </label>
