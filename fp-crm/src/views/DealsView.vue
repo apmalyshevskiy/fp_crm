@@ -1,9 +1,10 @@
 <!-- src/views/DealsView.vue — список сделок (карточка открывается модалкой) -->
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { db } from '../api/client'
 import { isArchived, isDeal, isOverdue, dealMatches, fmtDate, fmtDateShort, TEMP } from '../lib/deals'
 import DealCard from './DealCard.vue'
+import { refreshStore } from '../lib/refresh'
 
 const deals = ref([])
 const loading = ref(true)
@@ -13,9 +14,6 @@ const search = ref('')
 const filter = ref('all')
 const sort = ref('created')
 const selectedId = ref(null)   // открытая в модалке сделка
-const creating = ref(false)    // открыта модалка создания
-
-function closeCard() { selectedId.value = null; creating.value = false }
 
 const FILTERS = [
   { id: 'all', label: 'Все' }, { id: 'hot', label: 'Горячие' },
@@ -29,6 +27,7 @@ async function load() {
   catch (e) { error.value = e.message } finally { loading.value = false }
 }
 onMounted(load)
+watch(() => refreshStore.deals, load)
 
 const list = computed(() => {
   let l = filter.value === 'archived' ? deals.value.filter(isArchived) : deals.value.filter(isDeal)
@@ -58,7 +57,6 @@ function subDate(d) {
   <section>
     <div class="top-row">
       <h2>Сделки</h2>
-      <button class="primary new-deal" @click="creating = true">+ Новая сделка</button>
     </div>
 
     <div class="search-row">
@@ -99,13 +97,7 @@ function subDate(d) {
     </div>
 
     <!-- модальная карточка -->
-    <DealCard
-      v-if="selectedId || creating"
-      :key="creating ? 'new' : selectedId"
-      :id="selectedId"
-      :create="creating"
-      @close="closeCard"
-      @saved="load" />
+    <DealCard v-if="selectedId" :key="selectedId" :id="selectedId" @close="selectedId = null" @saved="load" />
   </section>
 </template>
 

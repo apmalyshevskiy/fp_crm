@@ -1,19 +1,18 @@
 <!-- src/views/LeadsView.vue — лиды (status='Лид') -->
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { db } from '../api/client'
 import { isArchived, isLead, daysSinceTouch, isFreshLead } from '../lib/deals'
 import DealCard from './DealCard.vue'
+import { refreshStore } from '../lib/refresh'
 
 const deals = ref([])
 const loading = ref(true)
 const error = ref('')
 const selectedId = ref(null)
-const creating = ref(false)
 const filter = ref('all')   // all | fresh | stale
 const sort = ref('newest')  // newest | oldest
 
-function closeCard() { selectedId.value = null; creating.value = false }
 
 async function load() {
   loading.value = true; error.value = ''
@@ -21,6 +20,7 @@ async function load() {
   catch (e) { error.value = e.message } finally { loading.value = false }
 }
 onMounted(load)
+watch(() => refreshStore.deals, load)
 
 const list = computed(() => {
   let l = deals.value.filter(d => !isArchived(d) && isLead(d))
@@ -47,7 +47,6 @@ function contactLine(d) { return [d.type, d.phone, d.email].filter(Boolean).join
   <section>
     <div class="top-row">
       <h2>Лиды</h2>
-      <button class="primary new-deal" @click="creating = true">+ Новый лид</button>
     </div>
 
     <div class="filter-row">
@@ -78,11 +77,7 @@ function contactLine(d) { return [d.type, d.phone, d.email].filter(Boolean).join
       </div>
     </div>
 
-    <DealCard
-      v-if="selectedId || creating"
-      :key="creating ? 'new' : selectedId"
-      :id="selectedId" :create="creating" create-status="Лид"
-      @close="closeCard" @saved="load" />
+    <DealCard v-if="selectedId" :key="selectedId" :id="selectedId" @close="selectedId = null" @saved="load" />
   </section>
 </template>
 

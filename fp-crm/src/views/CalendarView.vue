@@ -1,9 +1,10 @@
 <!-- src/views/CalendarView.vue — почасовой календарь (день/неделя/месяц), порт из fp_crm.html -->
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { db } from '../api/client'
 import { isArchived, isLead } from '../lib/deals'
 import DealCard from './DealCard.vue'
+import { refreshStore } from '../lib/refresh'
 
 const SLOT_PX = 34          // высота получасового слота
 const DAY_START = 8, DAY_END = 20
@@ -49,6 +50,7 @@ async function load() {
   catch (e) { error.value = e.message } finally { loading.value = false }
 }
 onMounted(load)
+watch(() => refreshStore.deals, load)
 
 // ---- события ----
 const events = computed(() => deals.value

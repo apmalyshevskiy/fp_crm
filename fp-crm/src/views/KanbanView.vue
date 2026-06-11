@@ -1,10 +1,11 @@
 <!-- src/views/KanbanView.vue — канбан: колонки-статусы, drag-drop = смена этапа -->
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { db } from '../api/client'
 import { isDeal, isOverdue, fmtDate, TEMP, FUNNEL_STATUSES, SIDE_STATUSES } from '../lib/deals'
 import { currentUserId } from '../lib/users'
 import DealCard from './DealCard.vue'
+import { refreshStore } from '../lib/refresh'
 
 const deals = ref([])
 const loading = ref(true)
@@ -23,6 +24,7 @@ async function load() {
   catch (e) { error.value = e.message } finally { loading.value = false }
 }
 onMounted(load)
+watch(() => refreshStore.deals, load)
 
 const active = computed(() => deals.value.filter(isDeal))
 
@@ -53,7 +55,7 @@ let scrollVel = 0
 function edgeScrollFrom(clientX) {
   if (!wrap.value) { scrollVel = 0; return }
   const rect = wrap.value.getBoundingClientRect()
-  const edge = 50, max = 20
+  const edge = 90, max = 20
   if (clientX > rect.right - edge) scrollVel = Math.ceil((clientX - (rect.right - edge)) / edge * max)
   else if (clientX < rect.left + edge) scrollVel = -Math.ceil(((rect.left + edge) - clientX) / edge * max)
   else scrollVel = 0
