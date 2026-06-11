@@ -5,6 +5,7 @@ import { db } from '../api/client'
 import { lookupByInn } from '../lib/inn'
 import ProposalsBlock from '../components/ProposalsBlock.vue'
 import ProposalForm from '../components/ProposalForm.vue'
+import CityTzPicker from '../components/CityTzPicker.vue'
 import {
   fmtDate, TEMP, parseJsonArray,
   TYPES, STAGES, SOURCES, ROLES, PLANS, HARDWARE, CURRENT_SYSTEMS, TEMPS, NEEDS,
@@ -37,7 +38,7 @@ const EDITABLE = [
   'client_name','company_name','inn','phone','email','contact_name','contact_role',
   'type','points','stage','open_date','source','current_system',
   'pain_quote','needs_text','temperature','revenue','plan','hardware',
-  'next_step','next_date','comment','city','timezone',
+  'next_step','next_date','comment','city','timezone','fp_client_id','fp_domain','fp_version',
 ]
 function toLocal(s) { return s ? String(s).slice(0, 16).replace(' ', 'T') : '' }
 function fromLocal(v) { return v ? v.replace('T', ' ') + (v.length === 16 ? ':00' : '') : null }
@@ -345,6 +346,9 @@ onBeforeUnmount(() => {
             <div class="field"><span class="lbl">Точек</span>{{ val('points') }}</div>
             <div class="field"><span class="lbl">Выручка, ₽/мес</span>{{ val('revenue') }}</div>
             <div class="field"><span class="lbl">Текущая система</span>{{ val('current_system') }}</div>
+            <div class="field"><span class="lbl">FP Client ID</span>{{ val('fp_client_id') }}</div>
+            <div class="field"><span class="lbl">FP Domain</span>{{ val('fp_domain') }}</div>
+            <div class="field"><span class="lbl">Версия FP</span>{{ deal.fp_version ? 'FP ' + deal.fp_version : '—' }}</div>
             <div class="field"><span class="lbl">Продавец</span>{{ userName(deal.seller_id) || '—' }}</div>
             <div class="field"><span class="lbl">Потребности</span>{{ parseJsonArray(deal.needs).join(', ') || '—' }}</div>
           </div>
@@ -424,8 +428,7 @@ onBeforeUnmount(() => {
               <label>Email<input v-model="form.email" /></label>
               <label>Контактное лицо<input v-model="form.contact_name" /></label>
               <label>Должность ЛПР<select v-model="form.contact_role"><option value="">—</option><option v-for="r in ROLES" :key="r">{{ r }}</option></select></label>
-              <label>Город<input v-model="form.city" list="city-list" @input="onCityInput" @change="onCityInput" placeholder="Например: Екатеринбург" /><datalist id="city-list"><option v-for="c in CITY_LIST" :key="c" :value="c"></option></datalist></label>
-              <label>Часовой пояс<select v-model="form.timezone"><option value="">— авто по городу —</option><option v-for="z in RU_TIMEZONES" :key="z.tz" :value="z.tz">{{ z.label }}</option></select></label>
+              <CityTzPicker v-model:city="form.city" v-model:timezone="form.timezone" />
               <div v-if="clientClock" class="client-clock" :class="{ offhours: isOffHours(clientClock.hour) }">
                 Время у клиента: <b>{{ clientClock.time }}</b><span v-if="clientClock.msk" class="msk"> · {{ clientClock.msk }}</span><span v-if="isOffHours(clientClock.hour)"> · не рабочее время</span>
               </div>
@@ -453,6 +456,9 @@ onBeforeUnmount(() => {
               <label>Оборот, ₽/мес<input type="number" v-model="form.revenue" /></label>
               <label>Тариф<select v-model="form.plan"><option value="">—</option><option v-for="p in PLANS" :key="p">{{ p }}</option></select></label>
               <label>Оборудование<select v-model="form.hardware"><option value="">—</option><option v-for="h in HARDWARE" :key="h">{{ h }}</option></select></label>
+              <label>FP Client ID <span class="hint-inline">(в биллинге)</span><input v-model="form.fp_client_id" placeholder="например, 14823" /></label>
+              <label>FP Domain <span class="hint-inline">(в биллинге)</span><input v-model="form.fp_domain" placeholder="client-subdomain" /></label>
+              <label>Версия FP по итогу<select v-model="form.fp_version"><option value="">не выбрано</option><option value="3">FP 3</option><option value="4">FP 4</option></select></label>
             </div>
           </div>
           <div class="card">
@@ -560,6 +566,7 @@ textarea.grow { resize: none; overflow-y: auto; max-height: 200px; min-height: 6
 .client-clock b { color: var(--text); }
 .client-clock.offhours, .client-clock.offhours b { color: var(--danger); }
 .msk { color: var(--text-tertiary); font-weight: 400; }
+.hint-inline { color: var(--text-tertiary); font-weight: 400; }
 .sub-head { display: flex; align-items: center; justify-content: space-between; margin: 14px 0 8px; font-size: 13px; color: var(--text-secondary); }
 .mini { font-size: 12px; padding: 5px 10px; border-radius: var(--radius); }
 .contact-row { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1.2fr auto auto; gap: 6px; align-items: center; margin-bottom: 6px; }
