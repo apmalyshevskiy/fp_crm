@@ -11,6 +11,7 @@ import {
   ALL_STATUSES, ACTIVITY_TYPES, ACTIVITY_LABEL,
 } from '../lib/deals'
 import { userName, currentUserId } from '../lib/users'
+import { RU_TIMEZONES, CITY_LIST, cityToTz, clientTime, isOffHours } from '../lib/timezones'
 
 const props = defineProps({
   id: { default: null },                      // id существующей сделки
@@ -36,12 +37,30 @@ const EDITABLE = [
   'client_name','company_name','inn','phone','email','contact_name','contact_role',
   'type','points','stage','open_date','source','current_system',
   'pain_quote','needs_text','temperature','revenue','plan','hardware',
-  'next_step','next_date','comment',
+  'next_step','next_date','comment','city','timezone',
 ]
 function toLocal(s) { return s ? String(s).slice(0, 16).replace(' ', 'T') : '' }
 function fromLocal(v) { return v ? v.replace('T', ' ') + (v.length === 16 ? ':00' : '') : null }
 function numOrNull(v) { if (v === '' || v == null) return null; const n = Number(v); return isNaN(n) ? null : n }
 function nowMysql() { const d = new Date(); const p = n => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}` }
+
+// авто-высота textarea по содержимому, с пределом
+function autoGrow(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 200) + 'px' }
+const vAutogrow = { mounted: (el) => autoGrow(el), updated: (el) => autoGrow(el) }
+
+// живые часы клиента: тикаем раз в 30с
+const now = ref(new Date())
+let clockTimer = null
+const clientClock = computed(() => {
+  const src = (mode.value === 'edit') ? form.value : deal.value
+  const tz = src ? (src.timezone || cityToTz(src.city)) : null
+  return clientTime(tz, now.value)
+})
+// при вводе города — подставить пояс, если город известен
+function onCityInput() {
+  const tz = cityToTz(form.value.city)
+  if (tz) form.value.timezone = tz
+}
 
 async function load() {
   const id = localId.value
@@ -281,8 +300,12 @@ onMounted(() => {
   if (props.create) startNew()
   else { load(); loadActivity() }
   window.addEventListener('keydown', onEsc)
+  clockTimer = setInterval(() => { now.value = new Date() }, 30000)
 })
-onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onEsc)
+  if (clockTimer) clearInterval(clockTimer)
+})
 </script>
 
 <template>
@@ -310,6 +333,11 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
             <div class="field"><span class="lbl">Телефон</span>{{ val('phone') }}</div>
             <div class="field"><span class="lbl">Email</span>{{ val('email') }}</div>
             <div class="field"><span class="lbl">Контакт</span>{{ val('contact_name') }}{{ deal.contact_role ? ` · ${deal.contact_role}` : '' }}</div>
+            <div class="field"><span class="lbl">Город</span>{{ val('city') }}</div>
+            <div v-if="clientClock" class="field">
+              <span class="lbl">Время у клиента</span>
+              <span :class="{ offhours: isOffHours(clientClock.hour) }">{{ clientClock.time }}<span v-if="clientClock.msk" class="msk"> · {{ clientClock.msk }}</span><span v-if="isOffHours(clientClock.hour)" class="offhours-note"> · не рабочее время</span></span>
+            </div>
           </div>
           <div class="card">
             <div class="card-title">Сделка</div>
@@ -324,6 +352,11 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
             <div class="card-title">Следующий шаг</div>
             <div class="field"><span class="lbl">Шаг</span>{{ val('next_step') }}</div>
             <div class="field"><span class="lbl">Дата</span>{{ fmtDate(deal.next_date) }}</div>
+          </div>
+
+          <div v-if="deal.comment" class="card">
+            <div class="card-title">Комментарий</div>
+            <div class="comment-view">{{ deal.comment }}</div>
           </div>
 
           <!-- коммерческие предложения -->
@@ -391,6 +424,11 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
               <label>Email<input v-model="form.email" /></label>
               <label>Контактное лицо<input v-model="form.contact_name" /></label>
               <label>Должность ЛПР<select v-model="form.contact_role"><option value="">—</option><option v-for="r in ROLES" :key="r">{{ r }}</option></select></label>
+              <label>Город<input v-model="form.city" list="city-list" @input="onCityInput" @change="onCityInput" placeholder="Например: Екатеринбург" /><datalist id="city-list"><option v-for="c in CITY_LIST" :key="c" :value="c"></option></datalist></label>
+              <label>Часовой пояс<select v-model="form.timezone"><option value="">— авто по городу —</option><option v-for="z in RU_TIMEZONES" :key="z.tz" :value="z.tz">{{ z.label }}</option></select></label>
+              <div v-if="clientClock" class="client-clock" :class="{ offhours: isOffHours(clientClock.hour) }">
+                Время у клиента: <b>{{ clientClock.time }}</b><span v-if="clientClock.msk" class="msk"> · {{ clientClock.msk }}</span><span v-if="isOffHours(clientClock.hour)"> · не рабочее время</span>
+              </div>
             </div>
             <div class="sub-head"><span>Дополнительные контакты</span><button type="button" class="mini" @click="addContact">+ Добавить контакт</button></div>
             <div v-for="(c, i) in form.contacts" :key="i" class="contact-row">
@@ -445,7 +483,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
           </div>
           <div class="card">
             <div class="card-title">Комментарий</div>
-            <label class="block"><textarea v-model="form.comment" rows="3"></textarea></label>
+            <label class="block"><textarea v-model="form.comment" v-autogrow rows="3" class="grow"></textarea></label>
           </div>
           <div class="card">
             <div class="card-title">Заполненность карточки · {{ checklistDone }}/{{ checklist.length }}</div>
@@ -514,6 +552,14 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
 .grid label, .block { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text-secondary); }
 .block { margin-bottom: 10px; }
 input, select, textarea { font: inherit; padding: 7px 10px; border: 0.5px solid var(--border); border-radius: var(--radius); background: var(--bg); width: 100%; }
+textarea.grow { resize: none; overflow-y: auto; max-height: 200px; min-height: 64px; }
+.comment-view { white-space: pre-wrap; line-height: 1.45; }
+.offhours { color: var(--danger); font-weight: 600; }
+.offhours-note { font-weight: 400; font-size: 12px; }
+.client-clock { grid-column: 1 / -1; font-size: 13px; color: var(--text-secondary); margin-top: -2px; }
+.client-clock b { color: var(--text); }
+.client-clock.offhours, .client-clock.offhours b { color: var(--danger); }
+.msk { color: var(--text-tertiary); font-weight: 400; }
 .sub-head { display: flex; align-items: center; justify-content: space-between; margin: 14px 0 8px; font-size: 13px; color: var(--text-secondary); }
 .mini { font-size: 12px; padding: 5px 10px; border-radius: var(--radius); }
 .contact-row { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1.2fr auto auto; gap: 6px; align-items: center; margin-bottom: 6px; }
