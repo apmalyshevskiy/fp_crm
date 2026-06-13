@@ -33,6 +33,7 @@ const saving = ref(false)
 const innLoading = ref(false)
 const form = ref({})
 const touch = ref({})
+const editTouch = ref({ type: 'call', summary: '' })   // быстрое касание из формы правки
 
 const EDITABLE = [
   'client_name','company_name','inn','phone','email','contact_name','contact_role',
@@ -79,6 +80,7 @@ async function loadActivity() {
 
 // ---- правка карточки ----
 function startEdit() {
+  editTouch.value = { type: 'call', summary: '' }
   const f = {}
   for (const k of EDITABLE) f[k] = deal.value[k] ?? ''
   f.next_date = toLocal(deal.value.next_date)
@@ -87,6 +89,7 @@ function startEdit() {
   f.contacts = parseJsonArray(deal.value.contacts)
   form.value = f
   mode.value = 'edit'
+  editBaseline.value = snapshot()
 }
 function toggleNeed(n) { const a = form.value.needs; const i = a.indexOf(n); i === -1 ? a.push(n) : a.splice(i, 1) }
 function addContact() { form.value.contacts.push({ name: '', role: '', phone: '', email: '', is_dm: false }) }
@@ -94,8 +97,19 @@ function removeContact(i) { form.value.contacts.splice(i, 1) }
 
 // ---- создание новой сделки ----
 function blankForm() { const f = {}; for (const k of EDITABLE) f[k] = ''; f.needs = []; f.contacts = []; return f }
-function startNew() { form.value = blankForm(); mode.value = 'edit'; loading.value = false }
+function startNew() { form.value = blankForm(); editTouch.value = { type: 'call', summary: '' }; mode.value = 'edit'; loading.value = false; editBaseline.value = snapshot() }
 function cancelEdit() { if (!localId.value) emit('close'); else mode.value = 'view' }
+
+// несохранённые изменения в правке
+const editBaseline = ref('')
+function snapshot() { return JSON.stringify({ f: form.value, t: editTouch.value }) }
+async function requestClose() {
+  if (mode.value === 'edit' && snapshot() !== editBaseline.value) {
+    const ok = confirm('Есть несохранённые изменения. Сохранить?\n\nОК — сохранить, Отмена — закрыть без сохранения.')
+    if (ok) { await saveEdit(); if (mode.value === 'view') emit('close'); return }
+  }
+  emit('close')
+}
 
 // ---- архив / восстановление / удаление ----
 async function acceptLead() {
@@ -218,6 +232,19 @@ async function saveEdit() {
       await putDeal(p)
       await load()
     }
+    // если в форме заполнено касание — добавить его в историю
+    const ts = String(editTouch.value.summary || '').trim()
+    if (localId.value && ts) {
+      const stamp = nowMysql()
+      await db.create('activity', {
+        deal_id: localId.value, created_at: stamp, seller_id: currentUserId() || (deal.value && deal.value.seller_id) || null,
+        type: editTouch.value.type, summary: ts,
+        status_after: deal.value ? deal.value.status : '', temperature_after: form.value.temperature || '',
+        next_step: form.value.next_step || '', next_date: fromLocal(form.value.next_date),
+      })
+      editTouch.value = { type: 'call', summary: '' }
+      await loadActivity()
+    }
     mode.value = 'view'; emit('saved')
   } catch (e) { error.value = e.message } finally { saving.value = false }
 }
@@ -317,7 +344,7 @@ onBeforeUnmount(() => {
         <div class="badges">
           <span v-if="deal" class="status">{{ deal.status || '—' }}</span>
           <span v-if="deal && TEMP[deal.temperature]" class="temp" :class="TEMP[deal.temperature].cls">{{ TEMP[deal.temperature].label }}</span>
-          <button class="x" @click="emit('close')">×</button>
+          <button class="x" @click="requestClose">×</button>
         </div>
       </div>
 
@@ -490,6 +517,13 @@ onBeforeUnmount(() => {
           <div class="card">
             <div class="card-title">Комментарий</div>
             <label class="block"><textarea v-model="form.comment" v-autogrow rows="3" class="grow"></textarea></label>
+          </div>
+          <div class="card">
+            <div class="card-title">Это касание <span class="hint-inline">(необязательно — добавится в историю)</span></div>
+            <div class="grid">
+              <label>Тип касания<select v-model="editTouch.type"><option v-for="t in ACTIVITY_TYPES" :key="t.value" :value="t.value">{{ t.label }}</option></select></label>
+            </div>
+            <label class="block">Резюме разговора (что обсудили, итог)<textarea v-model="editTouch.summary" rows="3" placeholder='Что обсудили в этот раз. Например: "Перезвонил, готов на демо. Просит подключить терминал банка ВТБ."'></textarea></label>
           </div>
           <div class="card">
             <div class="card-title">Заполненность карточки · {{ checklistDone }}/{{ checklist.length }}</div>
